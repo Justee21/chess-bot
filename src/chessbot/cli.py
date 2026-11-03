@@ -288,12 +288,11 @@ def main(argv: list[str] | None = None) -> None:
 
     elif args.command == "play":
         from chessbot.maia import MaiaPredictor
-        from chessbot.play import play_game_vs_human
+        from chessbot.play import choose_color, play_game_vs_human
         from chessbot.policy import HarnessPolicy
 
         rng = random.Random(args.seed)
-        human = {"white": chess.WHITE, "black": chess.BLACK}.get(args.color) \
-            or rng.choice([chess.WHITE, chess.BLACK])
+        human = choose_color(args.color, rng)
         elo = _json_or(args.calibration, "elo", 1500)
         temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
         policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature)

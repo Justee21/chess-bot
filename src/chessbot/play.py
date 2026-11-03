@@ -10,6 +10,13 @@ from chessbot.policy import HarnessPolicy
 from chessbot.rules import is_finished
 
 
+def choose_color(color: str, rng: random.Random) -> chess.Color:
+    """The human's color from "white", "black" or "random" (chess.BLACK is falsy, so compare strings)."""
+    if color == "random":
+        return rng.choice([chess.WHITE, chess.BLACK])
+    return chess.WHITE if color == "white" else chess.BLACK
+
+
 def parse_move(board: chess.Board, text: str) -> chess.Move:
     """A legal move from SAN ("Nf3", "e4") or UCI ("g1f3"); ValueError if it is neither."""
     text = text.strip()

@@ -82,9 +82,20 @@ def train(
     def snapshot() -> dict[str, torch.Tensor]:
         return {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
-    val_loss, val_top1 = _evaluate(model, val_examples, vocab_size, batch_size, device)
-    history = [{"epoch": 0, "train_loss": float("nan"), "val_loss": val_loss, "val_top1": val_top1}]
-    log(f"epoch 0  val_loss {val_loss:.4f}  val_top1 {val_top1:.3f}")
+    # The overfitting gap compares like with like: an unweighted score of a fixed training
+    # subsample (as large as validation), taken with the same function after every epoch.
+    train_probe = list(train_examples[:len(val_examples)])
+
+    def row(epoch: int, train_loss: float) -> dict:
+        val_loss, val_top1 = _evaluate(model, val_examples, vocab_size, batch_size, device)
+        probe_loss, probe_top1 = _evaluate(model, train_probe, vocab_size, batch_size, device)
+        log(f"epoch {epoch}  train_loss {train_loss:.4f}  train_eval {probe_loss:.4f}/{probe_top1:.3f}"
+            f"  val_loss {val_loss:.4f}  val_top1 {val_top1:.3f}")
+        return {"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss, "val_top1": val_top1,
+                "train_eval_loss": probe_loss, "train_top1": probe_top1}
+
+    history = [row(0, float("nan"))]
+    val_loss = history[0]["val_loss"]
     best_state, best_loss, best_epoch = snapshot(), val_loss, 0
 
     for epoch in range(1, epochs + 1):
@@ -104,10 +115,8 @@ def train(
             loss.backward()
             optimizer.step()
             losses.append(loss.item())
-        val_loss, val_top1 = _evaluate(model, val_examples, vocab_size, batch_size, device)
-        train_loss = sum(losses) / len(losses)
-        history.append({"epoch": epoch, "train_loss": train_loss, "val_loss": val_loss, "val_top1": val_top1})
-        log(f"epoch {epoch}  train_loss {train_loss:.4f}  val_loss {val_loss:.4f}  val_top1 {val_top1:.3f}")
+        history.append(row(epoch, sum(losses) / len(losses)))
+        val_loss = history[-1]["val_loss"]
         if val_loss < best_loss:
             best_state, best_loss, best_epoch = snapshot(), val_loss, epoch
         elif epoch - best_epoch >= patience:

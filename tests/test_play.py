@@ -62,3 +62,12 @@ def test_bad_input_reprompts_instead_of_crashing():
         read=lambda prompt: next(typed), write=lines.append,
     )
     assert any("not a legal move" in line.lower() for line in lines)
+
+
+def test_choose_color_honors_explicit_colors_and_randomizes_only_on_random():
+    from chessbot.play import choose_color
+
+    for seed in range(10):
+        assert choose_color("black", random.Random(seed)) == chess.BLACK
+        assert choose_color("white", random.Random(seed)) == chess.WHITE
+    assert {choose_color("random", random.Random(seed)) for seed in range(20)} == {chess.WHITE, chess.BLACK}

@@ -162,3 +162,15 @@ def test_saved_checkpoint_reloads_into_predictor_with_same_probabilities(tmp_pat
     reloaded = MaiaPredictor("maia3-5m", checkpoint=path).move_probs(chess.Board(), 1500, 1600)
     for uci, p in reloaded.items():
         assert expected[predictor.move_index[uci]].item() == pytest.approx(p, abs=1e-5)
+
+
+def test_history_reports_train_loss_on_the_same_footing_as_validation():
+    torch.manual_seed(0)
+    model = Stub()
+    train_ex, val_ex = _examples(120, 0), _examples(60, 1)
+    result = train(model, train_ex, val_ex, vocab_size=V, epochs=1, lr=1e-2,
+                   batch_size=32, patience=5, log=lambda s: None)
+    row = result.history[-1]
+    assert {"train_eval_loss", "train_top1"} <= set(row) and "train_eval_loss" in result.history[0]
+    # unweighted, measured after the epoch, on a fixed training subsample as large as validation
+    assert row["train_eval_loss"] == pytest.approx(_val_loss(model, train_ex[:len(val_ex)]), abs=1e-5)
