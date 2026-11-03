@@ -46,6 +46,8 @@ def _parse_moves(pgn: str) -> tuple[str, ...]:
     game = chess.pgn.read_game(io.StringIO(pgn))
     if game is None or game.errors:
         return ()
+    if game.board().fen() != chess.STARTING_FEN:  # custom start position: not standard chess
+        return ()
     return tuple(move.uci() for move in game.mainline_moves())
 
 

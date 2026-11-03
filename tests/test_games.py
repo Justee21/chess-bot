@@ -41,6 +41,27 @@ def test_moves_are_uci_tuples(tmp_path):
     assert isinstance(white_game, Game)
 
 
+def test_game_from_custom_start_position_is_skipped(tmp_path):
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    pgn = (
+        '[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n'
+        '[White "Justin0921"]\n[Black "x"]\n\n1. e4 Kd7 *\n'
+    )
+    odd = {
+        "games": [
+            {
+                "url": "u", "pgn": pgn, "time_class": "blitz", "rules": "chess",
+                "end_time": 1,
+                "white": {"username": "Justin0921", "rating": 1500},
+                "black": {"username": "x", "rating": 1500},
+            }
+        ]
+    }
+    (raw / "2023-11.json").write_text(json.dumps(odd))
+    assert load_games(raw) == []
+
+
 def test_game_with_unparseable_pgn_is_skipped(tmp_path):
     raw = tmp_path / "raw"
     raw.mkdir()
