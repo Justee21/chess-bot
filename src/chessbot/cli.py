@@ -99,6 +99,13 @@ def main(argv: list[str] | None = None) -> None:
     tune.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     tune.add_argument("--out", type=Path, default=Path("data/temperature.json"))
 
+    depth = sub.add_parser("book-depth", help="how long Justin and the bot stay in the table")
+    common(depth, table=True)
+    depth.add_argument("--games", type=int, default=100)
+    depth.add_argument("--temperature", type=float, default=None)
+    depth.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
+    depth.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
+
     args = parser.parse_args(argv)
 
     if args.command == "download":
@@ -149,6 +156,30 @@ def main(argv: list[str] | None = None) -> None:
                   f"p100={p['p100']:.3f} p200={p['p200']:.3f} p300={p['p300']:.3f}")
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(profile))
+
+    elif args.command == "book-depth":
+        import statistics
+
+        from chessbot.maia import MaiaPredictor
+        from chessbot.opening import book_exit_ply
+        from chessbot.policy import HarnessPolicy
+        from chessbot.selfplay import play_game
+
+        _, test = _split(args.raw, args.username)
+        table = MoveTable.load(args.table)
+        justin = [book_exit_ply(table, g.moves, g.my_color) for g in test]
+        elo = _json_or(args.calibration, "elo", 1500)
+        temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
+        policy = HarnessPolicy(table, MaiaPredictor(args.model), elo, temperature)
+        rng = random.Random(0)
+        bot = []
+        for _ in range(args.games):
+            moves = play_game(policy, rng)
+            bot.extend(book_exit_ply(table, moves, c) for c in (chess.WHITE, chess.BLACK))
+        print(f"book-exit ply (Justin's turns), Justin test games: n={len(justin)} "
+              f"median={statistics.median(justin)} mean={statistics.mean(justin):.1f}")
+        print(f"book-exit ply, bot self-play (elo={elo}, T={temperature}): n={len(bot)} "
+              f"median={statistics.median(bot)} mean={statistics.mean(bot):.1f}")
 
     elif args.command == "tune-temperature":
         from chessbot.maia import MaiaPredictor
