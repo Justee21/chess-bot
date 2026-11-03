@@ -19,6 +19,13 @@ def _split(raw: Path, username: str) -> tuple[list[Game], list[Game]]:
     return split_by_date(load_games(raw, username))
 
 
+def profile_sample(raw: Path, username: str, n: int, split: str = "train", seed: int = 0) -> list[Game]:
+    """Random sample of Justin's games from one side of the date split only."""
+    train, test = _split(raw, username)
+    pool = train if split == "train" else test
+    return random.Random(seed).sample(pool, min(n, len(pool)))
+
+
 def _json_or(path: Path, key: str, default):
     return json.loads(path.read_text())[key] if path.exists() else default
 
@@ -86,6 +93,8 @@ def main(argv: list[str] | None = None) -> None:
     prof = sub.add_parser("justin-profile", help="Stockfish error profile of Justin's own games")
     prof.add_argument("--raw", type=Path, default=Path("data/raw"))
     prof.add_argument("--username", default="Justin0921")
+    prof.add_argument("--split", choices=["train", "test"], default="train",
+                      help="train feeds tuning; test is the final comparison number")
     prof.add_argument("--games", type=int, default=300)
     prof.add_argument("--depth", type=int, default=12)
     prof.add_argument("--out", type=Path, default=Path("data/justin_profile.json"))
@@ -147,8 +156,7 @@ def main(argv: list[str] | None = None) -> None:
         args.out.write_text(json.dumps({"elo": best, "scores": scores}))
 
     elif args.command == "justin-profile":
-        games = load_games(args.raw, args.username)
-        sample = random.Random(0).sample(games, min(args.games, len(games)))
+        sample = profile_sample(args.raw, args.username, args.games, args.split)
         with _stockfish() as engine:
             profile = _profile_games(engine, sample, args.depth)
         for key, p in profile.items():

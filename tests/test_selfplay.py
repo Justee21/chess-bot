@@ -30,10 +30,10 @@ def test_play_game_respects_max_plies():
     assert len(play_game(policy, random.Random(0), max_plies=4)) == 4
 
 
-def test_play_game_stops_at_claimable_draw():
+def test_play_game_stops_at_real_threefold_not_a_claimable_one():
     policy = ScriptedPolicy(["g1f3", "g8f6", "f3g1", "f6g8"])
     moves = play_game(policy, random.Random(0), max_plies=400)
-    assert len(moves) < 400  # threefold repetition ends it
+    assert len(moves) == 8  # start position occurs a third time at ply 8; ply 7 is only claimable
 
 
 def test_play_game_is_seeded():

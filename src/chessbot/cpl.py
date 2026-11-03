@@ -6,6 +6,8 @@ from typing import Sequence
 import chess
 import chess.engine
 
+from chessbot.rules import is_finished
+
 MATE_SCORE = 1000
 LOSS_CAP = 1000.0
 
@@ -14,7 +16,7 @@ def _white_eval(engine, board: chess.Board, depth: int) -> int:
     """Centipawns from White's view; finished games are scored without the engine."""
     if board.is_checkmate():
         return -MATE_SCORE if board.turn == chess.WHITE else MATE_SCORE
-    if board.is_game_over(claim_draw=True):
+    if is_finished(board):
         return 0
     info = engine.analyse(board, chess.engine.Limit(depth=depth))
     return info["score"].white().score(mate_score=MATE_SCORE)

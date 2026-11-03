@@ -6,15 +6,16 @@ import random
 import chess
 
 from chessbot.policy import HarnessPolicy
+from chessbot.rules import is_finished
 
 
 def play_game(
     policy: HarnessPolicy, rng: random.Random, max_plies: int = 400
 ) -> tuple[str, ...]:
-    """Play `policy` against itself until a chess outcome (draws claimable) or `max_plies`."""
+    """Play `policy` against itself until the game is actually finished or `max_plies`."""
     board = chess.Board()
     moves: list[str] = []
-    while len(moves) < max_plies and board.outcome(claim_draw=True) is None:
+    while len(moves) < max_plies and not is_finished(board):
         move = policy.choose(board, rng).move
         board.push(move)
         moves.append(move.uci())

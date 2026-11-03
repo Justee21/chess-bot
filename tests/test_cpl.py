@@ -57,6 +57,12 @@ def test_finished_game_scored_without_asking_engine_about_mate():
     assert game_cpls(engine, moves, chess.WHITE) == [0.0, 1000.0]
 
 
+def test_claimable_draw_does_not_zero_the_eval():
+    moves = ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1"]  # black could claim, has not
+    engine = StubEngine([500] * 8)
+    assert game_cpls(engine, moves, chess.WHITE) == [0.0] * 4
+
+
 @pytest.mark.slow
 def test_real_stockfish_flags_the_blunder():
     import shutil
