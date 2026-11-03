@@ -137,3 +137,28 @@ def test_five_m_model_overfits_a_handful_of_positions():
     result = train(predictor.model, examples, examples, vocab_size=len(predictor.all_moves),
                    epochs=30, lr=1e-4, batch_size=16, patience=30, log=lambda s: None)
     assert result.history[-1]["train_loss"] <= 0.7 * result.history[0]["val_loss"]
+
+
+@pytest.mark.slow
+def test_saved_checkpoint_reloads_into_predictor_with_same_probabilities(tmp_path):
+    import chess
+
+    from chessbot.examples import build_examples
+    from chessbot.games import Game
+    from chessbot.maia import MaiaPredictor
+
+    predictor = MaiaPredictor("maia3-5m")
+    moves = ("e2e4", "c7c5", "g1f3", "d7d6", "d2d4", "c5d4", "f3d4", "g8f6")
+    examples = build_examples([Game("u", 1, "blitz", chess.WHITE, 1500, 1600, moves)], predictor.move_index)
+    result = train(predictor.model, examples, examples, vocab_size=len(predictor.all_moves),
+                   epochs=2, lr=1e-3, batch_size=4, patience=5, log=lambda s: None)
+    path = tmp_path / "ft.pt"
+    save_checkpoint(result.best_state, path)
+    predictor.model.load_state_dict(result.best_state)
+    tokens, se, oe, _, mask, _ = collate(examples[:1], len(predictor.all_moves))
+    with torch.no_grad():
+        logits = predictor.model(tokens, se, oe)[0].float().masked_fill(~mask, float("-inf"))
+    expected = torch.softmax(logits, dim=-1)[0]
+    reloaded = MaiaPredictor("maia3-5m", checkpoint=path).move_probs(chess.Board(), 1500, 1600)
+    for uci, p in reloaded.items():
+        assert expected[predictor.move_index[uci]].item() == pytest.approx(p, abs=1e-5)

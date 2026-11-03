@@ -11,7 +11,7 @@ import chess.engine
 
 from chessbot.cpl import error_profile, game_cpls
 from chessbot.games import Game, download_archives, load_games
-from chessbot.split import split_by_date
+from chessbot.split import split_by_date, three_way_split
 from chessbot.table import MoveTable
 
 
@@ -24,6 +24,18 @@ def profile_sample(raw: Path, username: str, n: int, split: str = "train", seed:
     train, test = _split(raw, username)
     pool = train if split == "train" else test
     return random.Random(seed).sample(pool, min(n, len(pool)))
+
+
+def export_examples(
+    raw: Path, username: str, out_dir: Path, move_index: dict[str, int], bullet_weight: float = 0.5
+) -> tuple[int, int, int]:
+    """Write training and validation examples; test games are counted but never written."""
+    from chessbot.examples import build_examples, save_examples
+
+    train, val, test = three_way_split(load_games(raw, username))
+    save_examples(build_examples(train, move_index, bullet_weight), out_dir / "train.npz")
+    save_examples(build_examples(val, move_index, bullet_weight), out_dir / "val.npz")
+    return len(train), len(val), len(test)
 
 
 def _json_or(path: Path, key: str, default):
@@ -64,6 +76,8 @@ def main(argv: list[str] | None = None) -> None:
         p.add_argument("--raw", type=Path, default=Path("data/raw"))
         p.add_argument("--username", default="Justin0921")
         p.add_argument("--model", default="maia3-23m")
+        p.add_argument("--checkpoint", type=Path, default=None,
+                       help="fine-tuned weights to use instead of the base model")
         if table:
             p.add_argument("--table", type=Path, default=Path("data/table.json"))
 
@@ -80,6 +94,7 @@ def main(argv: list[str] | None = None) -> None:
     common(ev, table=True)
     ev.add_argument("--policy", choices=["maia", "harness"], required=True)
     ev.add_argument("--elo", type=int, default=None)
+    ev.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     ev.add_argument("--temperature", type=float, default=1.0)
     ev.add_argument("--max-games", type=int, default=None)
 
@@ -115,6 +130,32 @@ def main(argv: list[str] | None = None) -> None:
     depth.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     depth.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
 
+    exp = sub.add_parser("export-examples", help="write fine-tune training/validation examples (never test games)")
+    exp.add_argument("--raw", type=Path, default=Path("data/raw"))
+    exp.add_argument("--username", default="Justin0921")
+    exp.add_argument("--out-dir", type=Path, default=Path("data/finetune"))
+    exp.add_argument("--bullet-weight", type=float, default=0.5)
+
+    ft = sub.add_parser("finetune", help="fine-tune Maia on the exported examples")
+    ft.add_argument("--examples", type=Path, default=Path("data/finetune"))
+    ft.add_argument("--model", default="maia3-23m")
+    ft.add_argument("--out", type=Path, required=True, help="new checkpoint file (must not exist)")
+    ft.add_argument("--epochs", type=int, default=3)
+    ft.add_argument("--lr", type=float, default=1e-5)
+    ft.add_argument("--batch-size", type=int, default=64)
+    ft.add_argument("--kl-weight", type=float, default=0.0)
+    ft.add_argument("--freeze-layers", type=int, default=0)
+    ft.add_argument("--patience", type=int, default=1)
+    ft.add_argument("--device", default="cpu", help="cpu, cuda or mps")
+    ft.add_argument("--max-examples", type=int, default=None, help="cap for smoke runs")
+
+    cmp_ = sub.add_parser("compare-position", help="base vs fine-tuned top moves for one position")
+    common(cmp_)
+    cmp_.add_argument("--fen", required=True)
+    cmp_.add_argument("--elo", type=int, default=None)
+    cmp_.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
+    cmp_.add_argument("--n", type=int, default=5)
+
     play = sub.add_parser("play", help="play the bot in the terminal")
     common(play, table=True)
     play.add_argument("--color", choices=["white", "black", "random"], default="white",
@@ -144,9 +185,9 @@ def main(argv: list[str] | None = None) -> None:
         from chessbot.policy import HarnessPolicy
 
         _, test = _split(args.raw, args.username)
-        elo = args.elo or _json_or(Path("data/calibration.json"), "elo", 1500)
+        elo = args.elo or _json_or(args.calibration, "elo", 1500)
         table = MoveTable.load(args.table) if args.policy == "harness" else None
-        policy = HarnessPolicy(table, MaiaPredictor(args.model), elo, args.temperature)
+        policy = HarnessPolicy(table, MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, args.temperature)
         print(f"policy={args.policy} model={args.model} elo={elo} temperature={args.temperature}")
         _print_summary(summarize(evaluate(policy.distribution, test, args.max_games)))
 
@@ -157,7 +198,7 @@ def main(argv: list[str] | None = None) -> None:
         train, _ = _split(args.raw, args.username)
         start, stop, step = args.elo_range
         best, scores = calibrate_elo(
-            MaiaPredictor(args.model), train, range(start, stop + 1, step), args.sample_games
+            MaiaPredictor(args.model, checkpoint=args.checkpoint), train, range(start, stop + 1, step), args.sample_games
         )
         for elo, score in scores.items():
             print(f"{elo:>6}  mean_logprob {score:.4f}{'  <-- best' if elo == best else ''}")
@@ -187,7 +228,7 @@ def main(argv: list[str] | None = None) -> None:
         justin = [book_exit_ply(table, g.moves, g.my_color) for g in test]
         elo = _json_or(args.calibration, "elo", 1500)
         temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
-        policy = HarnessPolicy(table, MaiaPredictor(args.model), elo, temperature)
+        policy = HarnessPolicy(table, MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature)
         rng = random.Random(0)
         bot = []
         for _ in range(args.games):
@@ -197,6 +238,53 @@ def main(argv: list[str] | None = None) -> None:
               f"median={statistics.median(justin)} mean={statistics.mean(justin):.1f}")
         print(f"book-exit ply, bot self-play (elo={elo}, T={temperature}): n={len(bot)} "
               f"median={statistics.median(bot)} mean={statistics.mean(bot):.1f}")
+
+    elif args.command == "export-examples":
+        from maia3.utils import get_all_possible_moves
+
+        move_index = {m: i for i, m in enumerate(get_all_possible_moves())}
+        n_train, n_val, n_test = export_examples(
+            args.raw, args.username, args.out_dir, move_index, args.bullet_weight
+        )
+        print(f"games: train {n_train}, validation {n_val}, test {n_test} (test not exported)")
+        print(f"wrote {args.out_dir}/train.npz and val.npz")
+
+    elif args.command == "finetune":
+        from chessbot.examples import load_examples
+        from chessbot.finetune import save_checkpoint, train
+        from chessbot.maia import MaiaPredictor
+
+        if args.out.exists():
+            raise SystemExit(f"{args.out} already exists; choose a new file name")
+        train_examples = load_examples(args.examples / "train.npz")
+        val_examples = load_examples(args.examples / "val.npz")
+        if args.max_examples:
+            train_examples = train_examples[:args.max_examples]
+            val_examples = val_examples[:max(1, args.max_examples // 5)]
+        predictor = MaiaPredictor(args.model, device=args.device)
+        print(f"{len(train_examples)} training and {len(val_examples)} validation examples")
+        result = train(
+            predictor.model, train_examples, val_examples, vocab_size=len(predictor.all_moves),
+            epochs=args.epochs, lr=args.lr, batch_size=args.batch_size, kl_weight=args.kl_weight,
+            freeze_layers=args.freeze_layers, patience=args.patience, device=args.device,
+        )
+        save_checkpoint(result.best_state, args.out)
+        print(f"best epoch {result.best_epoch} (0 = never beat the starting model); wrote {args.out}")
+
+    elif args.command == "compare-position":
+        from chessbot.compare import format_comparison, top_moves
+        from chessbot.maia import MaiaPredictor
+
+        if args.checkpoint is None:
+            raise SystemExit("compare-position needs --checkpoint (the fine-tuned weights)")
+        elo = args.elo or _json_or(args.calibration, "elo", 1700)
+        board = chess.Board(args.fen)
+        base = MaiaPredictor(args.model)
+        tuned = MaiaPredictor(args.model, checkpoint=args.checkpoint)
+        print(format_comparison(board, {
+            "base": top_moves(base, board, elo, args.n),
+            "fine-tuned": top_moves(tuned, board, elo, args.n),
+        }))
 
     elif args.command == "play":
         from chessbot.maia import MaiaPredictor
@@ -208,7 +296,7 @@ def main(argv: list[str] | None = None) -> None:
             or rng.choice([chess.WHITE, chess.BLACK])
         elo = _json_or(args.calibration, "elo", 1500)
         temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
-        policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model), elo, temperature)
+        policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature)
         print(f"You are {'White' if human == chess.WHITE else 'Black'}. "
               f"Moves like e4, Nf3, O-O or e2e4. (elo={elo}, T={temperature})")
         result = play_game_vs_human(policy, human, rng)
@@ -221,7 +309,7 @@ def main(argv: list[str] | None = None) -> None:
 
         target = json.loads(args.profile.read_text())["all"]
         elo = _json_or(args.calibration, "elo", 1500)
-        maia, table = MaiaPredictor(args.model), MoveTable.load(args.table)
+        maia, table = MaiaPredictor(args.model, checkpoint=args.checkpoint), MoveTable.load(args.table)
         profiles = {}
         with _stockfish() as engine:
             for temperature in args.temperatures:

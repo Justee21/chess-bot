@@ -127,3 +127,12 @@ def test_training_encoding_gives_the_same_probabilities_as_the_predictor(color):
         for uci, p in expected.items():
             idx = predictor.move_index[mirror_move(uci) if board.turn == chess.BLACK else uci]
             assert probs[i, idx].item() == pytest.approx(p, abs=1e-5)
+
+
+def test_loaded_examples_own_their_arrays_instead_of_viewing_the_whole_file(tmp_path):
+    # Views would pin the full stacked arrays once per example (tens of GB on the real data).
+    examples = build_examples([_game(OPENING), _game(OPENING, chess.BLACK)], MOVE_INDEX)
+    path = tmp_path / "ex.npz"
+    save_examples(examples, path)
+    for e in load_examples(path):
+        assert e.frames.flags.owndata and e.legal.flags.owndata

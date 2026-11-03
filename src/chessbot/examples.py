@@ -103,13 +103,16 @@ def save_examples(examples: Sequence[Example], path: Path) -> None:
 
 
 def load_examples(path: Path) -> list[Example]:
+    """Read each array once and copy per-example slices, so no example pins the whole file in memory."""
     with np.load(path) as data:
-        offsets = data["offsets"]
-        return [
-            Example(
-                frames=data["frames"][i], self_elo=int(data["self_elo"][i]), oppo_elo=int(data["oppo_elo"][i]),
-                target=int(data["target"][i]), legal=data["legal"][offsets[i]:offsets[i + 1]].astype(np.int16),
-                weight=float(data["weight"][i]),
-            )
-            for i in range(len(data["target"]))
-        ]
+        frames, legal, offsets = data["frames"], data["legal"], data["offsets"]
+        self_elo, oppo_elo = data["self_elo"], data["oppo_elo"]
+        target, weight = data["target"], data["weight"]
+    return [
+        Example(
+            frames=frames[i].copy(), self_elo=int(self_elo[i]), oppo_elo=int(oppo_elo[i]),
+            target=int(target[i]), legal=legal[offsets[i]:offsets[i + 1]].astype(np.int16),
+            weight=float(weight[i]),
+        )
+        for i in range(len(target))
+    ]
