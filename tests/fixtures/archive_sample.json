@@ -1,0 +1,39 @@
+{
+  "games": [
+    {
+      "url": "https://www.chess.com/game/live/1",
+      "pgn": "[Event \"Live Chess\"]\n[White \"Justin0921\"]\n[Black \"opp1\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Nf3 Nc6 1-0\n",
+      "time_class": "blitz",
+      "rules": "chess",
+      "end_time": 1700000200,
+      "white": {"username": "Justin0921", "rating": 1500, "result": "win"},
+      "black": {"username": "opp1", "rating": 1480, "result": "resigned"}
+    },
+    {
+      "url": "https://www.chess.com/game/live/2",
+      "pgn": "[Event \"Live Chess\"]\n[White \"opp2\"]\n[Black \"justin0921\"]\n[Result \"0-1\"]\n\n1. d4 d5 2. c4 e6 0-1\n",
+      "time_class": "bullet",
+      "rules": "chess",
+      "end_time": 1700000100,
+      "white": {"username": "opp2", "rating": 1620, "result": "resigned"},
+      "black": {"username": "justin0921", "rating": 1450, "result": "win"}
+    },
+    {
+      "url": "https://www.chess.com/game/live/3",
+      "time_class": "blitz",
+      "rules": "bughouse",
+      "end_time": 1700000300,
+      "white": {"username": "Justin0921", "rating": 1400, "result": "win"},
+      "black": {"username": "opp3", "rating": 1400, "result": "resigned"}
+    },
+    {
+      "url": "https://www.chess.com/game/live/4",
+      "pgn": "[Event \"Live Chess\"]\n[Variant \"Chess960\"]\n[SetUp \"1\"]\n[FEN \"bbqnnrkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w KQkq - 0 1\"]\n[White \"Justin0921\"]\n[Black \"opp4\"]\n[Result \"1-0\"]\n\n1. e3 e6 1-0\n",
+      "time_class": "rapid",
+      "rules": "chess960",
+      "end_time": 1700000400,
+      "white": {"username": "Justin0921", "rating": 1500, "result": "win"},
+      "black": {"username": "opp4", "rating": 1500, "result": "resigned"}
+    }
+  ]
+}

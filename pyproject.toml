@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chessbot"
+version = "0.1.0"
+description = "A chess bot that plays like Justin: personal move table plus Maia 3 fallback"
+requires-python = ">=3.10"
+dependencies = ["python-chess", "numpy"]
+license = { text = "AGPL-3.0-or-later" }
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-m 'not slow'"
+markers = ["slow: needs Maia weights or Stockfish (run with -m slow)"]
