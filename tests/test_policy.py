@@ -87,6 +87,45 @@ def test_choose_with_no_legal_moves_raises_valueerror():
         policy.choose(board, random.Random(0))
 
 
+STALEMATE_TRAP = "k7/8/1K6/8/8/8/8/2Q5 w - - 0 1"  # Qc7 would stalemate Black
+
+
+def test_choose_never_stalemates_when_another_move_exists():
+    board = chess.Board(STALEMATE_TRAP)
+    policy = HarnessPolicy(None, StubMaia({"c1c7": 0.9, "c1c2": 0.1}), elo=1500, temperature=1.0)
+    rng = random.Random(0)
+    picks = {policy.choose(board, rng).move.uci() for _ in range(300)}
+    assert picks == {"c1c2"}
+
+
+def test_choose_never_repeats_a_position_a_third_time():
+    board = chess.Board()
+    for uci in ("g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1"):
+        board.push_uci(uci)  # f6g8 now would be the third occurrence of the start position
+    policy = HarnessPolicy(None, StubMaia({"f6g8": 0.9, "e7e5": 0.1}), elo=1500, temperature=1.0)
+    rng = random.Random(0)
+    picks = {policy.choose(board, rng).move.uci() for _ in range(300)}
+    assert picks == {"e7e5"}
+
+
+def test_table_move_that_draws_is_skipped_for_maia():
+    class DrawingTable:
+        def lookup(self, board, min_count):
+            return {"c1c7": 1.0}
+
+    board = chess.Board(STALEMATE_TRAP)
+    policy = HarnessPolicy(DrawingTable(), StubMaia({"c1c2": 1.0}), elo=1500, temperature=1.0)
+    choice = policy.choose(board, random.Random(0))
+    assert choice == Choice(chess.Move.from_uci("c1c2"), "maia")
+
+
+def test_distribution_is_not_filtered_so_evaluation_stays_honest():
+    board = chess.Board(STALEMATE_TRAP)
+    policy = HarnessPolicy(None, StubMaia({"c1c7": 0.9, "c1c2": 0.1}), elo=1500, temperature=1.0)
+    dist, _ = policy.distribution(board)
+    assert dist["c1c7"] == pytest.approx(0.9)
+
+
 def test_nonpositive_temperature_rejected():
     with pytest.raises(ValueError):
         HarnessPolicy(None, StubMaia(MAIA), elo=1500, temperature=0)

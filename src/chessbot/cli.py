@@ -115,6 +115,15 @@ def main(argv: list[str] | None = None) -> None:
     depth.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     depth.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
 
+    play = sub.add_parser("play", help="play the bot in the terminal")
+    common(play, table=True)
+    play.add_argument("--color", choices=["white", "black", "random"], default="white",
+                      help="your color")
+    play.add_argument("--temperature", type=float, default=None)
+    play.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
+    play.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
+    play.add_argument("--seed", type=int, default=None)
+
     args = parser.parse_args(argv)
 
     if args.command == "download":
@@ -188,6 +197,22 @@ def main(argv: list[str] | None = None) -> None:
               f"median={statistics.median(justin)} mean={statistics.mean(justin):.1f}")
         print(f"book-exit ply, bot self-play (elo={elo}, T={temperature}): n={len(bot)} "
               f"median={statistics.median(bot)} mean={statistics.mean(bot):.1f}")
+
+    elif args.command == "play":
+        from chessbot.maia import MaiaPredictor
+        from chessbot.play import play_game_vs_human
+        from chessbot.policy import HarnessPolicy
+
+        rng = random.Random(args.seed)
+        human = {"white": chess.WHITE, "black": chess.BLACK}.get(args.color) \
+            or rng.choice([chess.WHITE, chess.BLACK])
+        elo = _json_or(args.calibration, "elo", 1500)
+        temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
+        policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model), elo, temperature)
+        print(f"You are {'White' if human == chess.WHITE else 'Black'}. "
+              f"Moves like e4, Nf3, O-O or e2e4. (elo={elo}, T={temperature})")
+        result = play_game_vs_human(policy, human, rng)
+        print(f"Result: {result}")
 
     elif args.command == "tune-temperature":
         from chessbot.maia import MaiaPredictor
