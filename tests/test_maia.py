@@ -1,7 +1,8 @@
 import chess
+import torch
 import pytest
 
-from chessbot.maia import MaiaPredictor
+from chessbot.maia import MaiaPredictor, history_frames
 
 pytestmark = pytest.mark.slow
 
@@ -60,3 +61,31 @@ def test_elo_changes_distribution(maia):
     low = maia.move_probs(board, 800, 800)
     high = maia.move_probs(board, 2200, 2200)
     assert low != pytest.approx(high)
+
+
+def test_checkpoint_argument_loads_that_file(maia, tmp_path):
+    state = {k: v.clone() for k, v in maia.model.state_dict().items()}
+    key = next(k for k in state if k.startswith("proj_sq_from") and k.endswith("weight"))
+    state[key] = state[key] * 1.5
+    path = tmp_path / "ft.pt"
+    torch.save({"model_state_dict": state}, path)
+    tuned = MaiaPredictor("maia3-5m", checkpoint=path)
+    board = chess.Board()
+    base = maia.move_probs(board, 1500, 1500)
+    changed = tuned.move_probs(board, 1500, 1500)
+    assert any(abs(base[m] - changed[m]) > 1e-6 for m in base)
+
+
+def test_missing_checkpoint_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        MaiaPredictor("maia3-5m", checkpoint=tmp_path / "nope.pt")
+
+
+def test_history_frames_matches_predictor_history(maia):
+    board = chess.Board()
+    for uci in ("e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "d2d3", "f8c5", "c2c3", "d7d6", "b1d2", "c8e6"):
+        board.push_uci(uci)
+        frames = history_frames(board, 8)
+        expected = maia._history(board)
+        assert len(frames) == len(expected)
+        assert all(torch.equal(a, b) for a, b in zip(frames, expected))

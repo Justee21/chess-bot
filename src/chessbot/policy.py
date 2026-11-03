@@ -1,4 +1,4 @@
-"""Table-first, Maia-fallback move policy. Moves are sampled, never argmax; the bot never resigns."""
+"""Table-first, Maia-fallback move policy. Moves are sampled, never argmax; the bot never resigns or draws."""
 from __future__ import annotations
 
 import random
@@ -7,6 +7,7 @@ from typing import Protocol
 
 import chess
 
+from chessbot.rules import move_draws
 from chessbot.table import MoveTable
 
 
@@ -44,13 +45,31 @@ class HarnessPolicy:
             from_table = self.table.lookup(board, self.min_count)
             if from_table:
                 return from_table, "table"
+        return self._maia_distribution(board), "maia"
+
+    def _maia_distribution(self, board: chess.Board) -> dict[str, float]:
         probs = self.maia.move_probs(board, self.elo, self.elo)
         if self.temperature != 1.0:
             probs = {m: p ** (1.0 / self.temperature) for m, p in probs.items()}
         total = sum(probs.values())
-        return {m: p / total for m, p in probs.items()}, "maia"
+        return {m: p / total for m, p in probs.items()}
+
+    def _playable(self, board: chess.Board, dist: dict[str, float]) -> dict[str, float]:
+        """`dist` without moves that end the game in a draw; empty if nothing is left."""
+        return {
+            m: p for m, p in dist.items()
+            if p > 0 and not move_draws(board, chess.Move.from_uci(m))
+        }
 
     def choose(self, board: chess.Board, rng: random.Random) -> Choice:
+        """Sample a move. The bot never plays a move that draws the game unless every move does."""
         dist, source = self.distribution(board)
-        uci = rng.choices(list(dist), weights=list(dist.values()))[0]
+        pool = self._playable(board, dist)
+        if not pool and source == "table":
+            dist, source = self._maia_distribution(board), "maia"
+            pool = self._playable(board, dist)
+        if not pool:  # Maia gave no non-drawing move weight; any non-drawing legal move beats a draw
+            legal = {m.uci(): 1.0 for m in board.legal_moves}
+            pool = self._playable(board, legal) or dist
+        uci = rng.choices(list(pool), weights=list(pool.values()))[0]
         return Choice(chess.Move.from_uci(uci), source)
