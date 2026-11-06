@@ -71,3 +71,23 @@ def test_choose_color_honors_explicit_colors_and_randomizes_only_on_random():
         assert choose_color("black", random.Random(seed)) == chess.BLACK
         assert choose_color("white", random.Random(seed)) == chess.WHITE
     assert {choose_color("random", random.Random(seed)) for seed in range(20)} == {chess.WHITE, chess.BLACK}
+
+
+def test_pick_blind_is_seeded_and_covers_every_option():
+    from chessbot.play import pick_blind
+
+    names = ["base", "ft1", "ft2"]
+    assert pick_blind(names, random.Random(3)) == pick_blind(names, random.Random(3))
+    assert {pick_blind(names, random.Random(seed)) for seed in range(40)} == set(names)
+
+
+def test_log_blind_appends_one_json_line_per_game(tmp_path):
+    import json
+
+    from chessbot.play import log_blind
+
+    path = tmp_path / "sub" / "blind.jsonl"
+    log_blind(path, {"actual": "ft2", "guess": "base", "result": "1-0"})
+    log_blind(path, {"actual": "base", "guess": "base", "result": "*"})
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert [r["actual"] for r in rows] == ["ft2", "base"]

@@ -67,3 +67,10 @@ def test_classify_phase_cases():
     assert classify_phase(middle) == "middlegame"
     assert classify_phase(chess.Board("4k3/8/8/8/8/8/8/R3K2R w - - 0 30")) == "endgame"
     assert classify_phase(chess.Board("4k3/8/8/8/8/8/8/R3K2R w - - 0 5")) == "opening"
+
+
+def test_skipped_plies_are_not_scored():
+    game = _game(["e2e4", "e7e5", "g1f3", "b8c6"])
+    seen = [m for _, _, m in justin_positions([game], skip={"u0": {2}})]
+    assert seen == ["e2e4"]
+    assert len(evaluate(lambda b: ({"e2e4": 1.0}, "maia"), [game], skip={"u0": {0}})) == 1

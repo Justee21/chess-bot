@@ -11,6 +11,7 @@ import chess.engine
 
 from chessbot.cpl import error_profile, game_cpls
 from chessbot.games import Game, download_archives, load_games
+from chessbot.scramble import find_scrambles, load_scrambles, save_scrambles, scramble_candidates
 from chessbot.split import split_by_date, three_way_split
 from chessbot.table import MoveTable
 
@@ -27,14 +28,15 @@ def profile_sample(raw: Path, username: str, n: int, split: str = "train", seed:
 
 
 def export_examples(
-    raw: Path, username: str, out_dir: Path, move_index: dict[str, int], bullet_weight: float = 0.5
+    raw: Path, username: str, out_dir: Path, move_index: dict[str, int], bullet_weight: float = 0.5,
+    skip: dict[str, set[int]] | None = None,
 ) -> tuple[int, int, int]:
     """Write training and validation examples; test games are counted but never written."""
     from chessbot.examples import build_examples, save_examples
 
     train, val, test = three_way_split(load_games(raw, username))
-    save_examples(build_examples(train, move_index, bullet_weight), out_dir / "train.npz")
-    save_examples(build_examples(val, move_index, bullet_weight), out_dir / "val.npz")
+    save_examples(build_examples(train, move_index, bullet_weight, skip=skip), out_dir / "train.npz")
+    save_examples(build_examples(val, move_index, bullet_weight, skip=skip), out_dir / "val.npz")
     return len(train), len(val), len(test)
 
 
@@ -49,11 +51,13 @@ def _print_summary(summary: dict[str, dict[str, float]]) -> None:
         print(f"{key:<22}{int(s['n']):>8}{s['top1']:>8.3f}{s['top3']:>8.3f}{s['mean_logprob']:>11.3f}")
 
 
-def _profile_games(engine, games: list[Game], depth: int) -> dict[str, dict[str, float]]:
+def _profile_games(
+    engine, games: list[Game], depth: int, skip: dict[str, set[int]] | None = None
+) -> dict[str, dict[str, float]]:
     by_class: dict[str, list[float]] = {}
     for game in games:
         by_class.setdefault(game.time_class, []).extend(
-            game_cpls(engine, game.moves, game.my_color, depth)
+            game_cpls(engine, game.moves, game.my_color, depth, skip=(skip or {}).get(game.url, ()))
         )
     everything = [c for cpls in by_class.values() for c in cpls]
     out = {"all": error_profile(everything)}
@@ -97,6 +101,8 @@ def main(argv: list[str] | None = None) -> None:
     ev.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     ev.add_argument("--temperature", type=float, default=1.0)
     ev.add_argument("--max-games", type=int, default=None)
+    ev.add_argument("--scrambles", type=Path, default=None,
+                    help="leave out the time-scramble moves listed in this file (see mark-scrambles)")
 
     cal = sub.add_parser("calibrate", help="pick the Maia Elo input using TRAIN games only")
     common(cal)
@@ -113,10 +119,23 @@ def main(argv: list[str] | None = None) -> None:
     prof.add_argument("--games", type=int, default=300)
     prof.add_argument("--depth", type=int, default=12)
     prof.add_argument("--out", type=Path, default=Path("data/justin_profile.json"))
+    prof.add_argument("--scrambles", type=Path, default=None,
+                      help="leave out the time-scramble moves listed in this file")
+
+    mark = sub.add_parser("mark-scrambles",
+                          help="find bullet moves played in a time scramble that also lost a lot")
+    mark.add_argument("--raw", type=Path, default=Path("data/raw"))
+    mark.add_argument("--username", default="Justin0921")
+    mark.add_argument("--max-seconds", type=float, default=5.0, help="clock left after the move")
+    mark.add_argument("--loss", type=float, default=200.0, help="centipawns lost by the move")
+    mark.add_argument("--depth", type=int, default=12)
+    mark.add_argument("--out", type=Path, default=Path("data/scrambles.json"))
 
     tune = sub.add_parser("tune-temperature", help="pick the sampling temperature by self-play")
     common(tune, table=True)
     tune.add_argument("--temperatures", type=float, nargs="+", default=[0.6, 0.8, 1.0, 1.2])
+    tune.add_argument("--min-p", type=float, default=0.05,
+                      help="never sample a move under this fraction of the best move's probability")
     tune.add_argument("--games", type=int, default=40)
     tune.add_argument("--depth", type=int, default=12)
     tune.add_argument("--profile", type=Path, default=Path("data/justin_profile.json"))
@@ -127,6 +146,7 @@ def main(argv: list[str] | None = None) -> None:
     common(depth, table=True)
     depth.add_argument("--games", type=int, default=100)
     depth.add_argument("--temperature", type=float, default=None)
+    depth.add_argument("--min-p", type=float, default=None)
     depth.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     depth.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
 
@@ -135,6 +155,8 @@ def main(argv: list[str] | None = None) -> None:
     exp.add_argument("--username", default="Justin0921")
     exp.add_argument("--out-dir", type=Path, default=Path("data/finetune"))
     exp.add_argument("--bullet-weight", type=float, default=0.5)
+    exp.add_argument("--scrambles", type=Path, default=None,
+                     help="leave out the time-scramble moves listed in this file")
 
     ft = sub.add_parser("finetune", help="fine-tune Maia on the exported examples")
     ft.add_argument("--examples", type=Path, default=Path("data/finetune"))
@@ -161,9 +183,20 @@ def main(argv: list[str] | None = None) -> None:
     play.add_argument("--color", choices=["white", "black", "random"], default="white",
                       help="your color")
     play.add_argument("--temperature", type=float, default=None)
+    play.add_argument("--min-p", type=float, default=None)
     play.add_argument("--calibration", type=Path, default=Path("data/calibration.json"))
     play.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
     play.add_argument("--seed", type=int, default=None)
+
+    blind = sub.add_parser("blind", help="play a hidden model (base, ft1 or ft2), then guess which it was")
+    blind.add_argument("--raw", type=Path, default=Path("data/raw"))
+    blind.add_argument("--table", type=Path, default=Path("data/table.json"))
+    blind.add_argument("--model", default="maia3-23m")
+    blind.add_argument("--color", choices=["white", "black", "random"], default="white",
+                       help="your color")
+    blind.add_argument("--min-p", type=float, default=0.05, help="rare-move cutoff, the same for every model")
+    blind.add_argument("--seed", type=int, default=None)
+    blind.add_argument("--log", type=Path, default=Path("data/blind-log.jsonl"))
 
     args = parser.parse_args(argv)
 
@@ -188,8 +221,10 @@ def main(argv: list[str] | None = None) -> None:
         elo = args.elo or _json_or(args.calibration, "elo", 1500)
         table = MoveTable.load(args.table) if args.policy == "harness" else None
         policy = HarnessPolicy(table, MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, args.temperature)
-        print(f"policy={args.policy} model={args.model} elo={elo} temperature={args.temperature}")
-        _print_summary(summarize(evaluate(policy.distribution, test, args.max_games)))
+        print(f"policy={args.policy} model={args.model} elo={elo} temperature={args.temperature}"
+              + (f" scrambles={args.scrambles}" if args.scrambles else ""))
+        skip = load_scrambles(args.scrambles) if args.scrambles else None
+        _print_summary(summarize(evaluate(policy.distribution, test, args.max_games, skip)))
 
     elif args.command == "calibrate":
         from chessbot.calibrate import calibrate_elo
@@ -205,10 +240,28 @@ def main(argv: list[str] | None = None) -> None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps({"elo": best, "scores": scores}))
 
+    elif args.command == "mark-scrambles":
+        games = load_games(args.raw, args.username)
+        found: dict[str, list[int]] = {}
+        candidates = 0
+        with _stockfish() as engine:
+            for i, game in enumerate(games, 1):
+                candidates += len(scramble_candidates(game, args.max_seconds))
+                plies = find_scrambles(engine, game, args.max_seconds, args.loss, args.depth)
+                if plies:
+                    found[game.url] = plies
+                if i % 500 == 0:
+                    print(f"{i}/{len(games)} games, {sum(map(len, found.values()))} scramble moves so far", flush=True)
+        save_scrambles(found, args.out)
+        marked = sum(map(len, found.values()))
+        print(f"{marked} scramble moves in {len(found)} games "
+              f"(of {candidates} moves with {args.max_seconds:g}s or less left); wrote {args.out}")
+
     elif args.command == "justin-profile":
         sample = profile_sample(args.raw, args.username, args.games, args.split)
+        skip = load_scrambles(args.scrambles) if args.scrambles else None
         with _stockfish() as engine:
-            profile = _profile_games(engine, sample, args.depth)
+            profile = _profile_games(engine, sample, args.depth, skip)
         for key, p in profile.items():
             print(f"{key:<14} n={p['n']:<6} avg_cpl={p['avg_cpl']:.1f} "
                   f"p100={p['p100']:.3f} p200={p['p200']:.3f} p300={p['p300']:.3f}")
@@ -228,7 +281,8 @@ def main(argv: list[str] | None = None) -> None:
         justin = [book_exit_ply(table, g.moves, g.my_color) for g in test]
         elo = _json_or(args.calibration, "elo", 1500)
         temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
-        policy = HarnessPolicy(table, MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature)
+        min_p = args.min_p if args.min_p is not None else _json_or(args.tuned, "min_p", 0.0)
+        policy = HarnessPolicy(table, MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature, min_p=min_p)
         rng = random.Random(0)
         bot = []
         for _ in range(args.games):
@@ -243,8 +297,9 @@ def main(argv: list[str] | None = None) -> None:
         from maia3.utils import get_all_possible_moves
 
         move_index = {m: i for i, m in enumerate(get_all_possible_moves())}
+        skip = load_scrambles(args.scrambles) if args.scrambles else None
         n_train, n_val, n_test = export_examples(
-            args.raw, args.username, args.out_dir, move_index, args.bullet_weight
+            args.raw, args.username, args.out_dir, move_index, args.bullet_weight, skip
         )
         print(f"games: train {n_train}, validation {n_val}, test {n_test} (test not exported)")
         print(f"wrote {args.out_dir}/train.npz and val.npz")
@@ -295,11 +350,43 @@ def main(argv: list[str] | None = None) -> None:
         human = choose_color(args.color, rng)
         elo = _json_or(args.calibration, "elo", 1500)
         temperature = args.temperature or _json_or(args.tuned, "temperature", 1.0)
-        policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature)
+        min_p = args.min_p if args.min_p is not None else _json_or(args.tuned, "min_p", 0.0)
+        policy = HarnessPolicy(MoveTable.load(args.table), MaiaPredictor(args.model, checkpoint=args.checkpoint), elo, temperature, min_p=min_p)
         print(f"You are {'White' if human == chess.WHITE else 'Black'}. "
-              f"Moves like e4, Nf3, O-O or e2e4. (elo={elo}, T={temperature})")
+              f"Moves like e4, Nf3, O-O or e2e4. (elo={elo}, T={temperature}, min_p={min_p})")
         result = play_game_vs_human(policy, human, rng)
         print(f"Result: {result}")
+
+    elif args.command == "blind":
+        from chessbot.maia import MaiaPredictor
+        from chessbot.play import choose_color, log_blind, pick_blind, play_game_vs_human
+        from chessbot.policy import HarnessPolicy
+
+        # name -> (checkpoint, calibration, tuned temperature)
+        models = {
+            "base": (None, "data/calibration.json", "data/temperature.json"),
+            "ft1": ("data/finetuned-23m.pt", "data/calibration-ft.json", "data/temperature-ft-minp.json"),
+            "ft2": ("data/finetuned-23m-clean.pt", "data/calibration-ft-clean.json", "data/temperature-ft-clean.json"),
+        }
+        rng = random.Random(args.seed)
+        actual = pick_blind(list(models), rng)
+        checkpoint, calibration, tuned = models[actual]
+        human = choose_color(args.color, rng)
+        elo = _json_or(Path(calibration), "elo", 1500)
+        temperature = _json_or(Path(tuned), "temperature", 1.0)
+        maia = MaiaPredictor(args.model, checkpoint=Path(checkpoint) if checkpoint else None)
+        policy = HarnessPolicy(MoveTable.load(args.table), maia, elo, temperature, min_p=args.min_p)
+        print(f"Blind test: you are {'White' if human == chess.WHITE else 'Black'}. "
+              "The opponent is base, ft1 or ft2 and stays hidden until you guess. "
+              "Moves like e4, Nf3, O-O or e2e4.")
+        result = play_game_vs_human(policy, human, rng)
+        print(f"Result: {result}")
+        guess = ""
+        while guess not in models:
+            guess = input("Which one was it? (base / ft1 / ft2): ").strip().lower()
+        log_blind(args.log, {"actual": actual, "guess": guess, "result": result,
+                             "human": "white" if human == chess.WHITE else "black"})
+        print(f"It was {actual}. You guessed {'right' if guess == actual else 'wrong'}.")
 
     elif args.command == "tune-temperature":
         from chessbot.maia import MaiaPredictor
@@ -312,7 +399,7 @@ def main(argv: list[str] | None = None) -> None:
         profiles = {}
         with _stockfish() as engine:
             for temperature in args.temperatures:
-                policy = HarnessPolicy(table, maia, elo, temperature)
+                policy = HarnessPolicy(table, maia, elo, temperature, min_p=args.min_p)
                 rng = random.Random(0)
                 cpls: list[float] = []
                 for _ in range(args.games):
@@ -325,5 +412,5 @@ def main(argv: list[str] | None = None) -> None:
         best = pick_temperature(profiles, target)
         print(f"chosen temperature: {best}")
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps({"temperature": best,
+        args.out.write_text(json.dumps({"temperature": best, "min_p": args.min_p,
                                         "profiles": {str(k): v for k, v in profiles.items()}}))

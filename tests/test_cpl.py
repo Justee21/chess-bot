@@ -72,3 +72,18 @@ def test_real_stockfish_flags_the_blunder():
     with chess.engine.SimpleEngine.popen_uci(path) as engine:
         losses = game_cpls(engine, ["f2f3", "e7e5", "g2g4", "d8h4"], chess.WHITE, depth=8)
     assert losses[1] >= 500
+
+
+def test_game_cpls_skips_the_given_plies():
+    engine = StubEngine([20, -230, -230, -230, -230])
+    moves = ["e2e4", "e7e5", "g1f3", "b8c6"]
+    assert game_cpls(engine, moves, chess.WHITE) == [250.0, 0.0]
+    assert game_cpls(engine, moves, chess.WHITE, skip={0}) == [0.0]
+
+
+def test_move_loss_is_the_capped_drop_for_the_mover():
+    from chessbot.cpl import move_loss
+
+    engine = StubEngine([20, -230])
+    assert move_loss(engine, chess.Board(), "e2e4") == 250.0
+    assert move_loss(StubEngine([20, 900]), chess.Board(), "e2e4") == 0.0

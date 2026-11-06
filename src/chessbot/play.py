@@ -1,8 +1,10 @@
 """Play the harness bot in a terminal. The bot never resigns and never draws."""
 from __future__ import annotations
 
+import json
 import random
-from typing import Callable
+from pathlib import Path
+from typing import Callable, Sequence
 
 import chess
 
@@ -15,6 +17,18 @@ def choose_color(color: str, rng: random.Random) -> chess.Color:
     if color == "random":
         return rng.choice([chess.WHITE, chess.BLACK])
     return chess.WHITE if color == "white" else chess.BLACK
+
+
+def pick_blind(names: Sequence[str], rng: random.Random) -> str:
+    """The hidden opponent for a blind test."""
+    return rng.choice(list(names))
+
+
+def log_blind(path: Path, entry: dict) -> None:
+    """Append one blind-test result (actual model, guess, result) as a JSON line."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as f:
+        f.write(json.dumps(entry) + "\n")
 
 
 def parse_move(board: chess.Board, text: str) -> chess.Move:

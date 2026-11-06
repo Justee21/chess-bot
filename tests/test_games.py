@@ -80,3 +80,28 @@ def test_game_with_unparseable_pgn_is_skipped(tmp_path):
     }
     (raw / "2023-11.json").write_text(json.dumps(bad))
     assert load_games(raw) == []
+
+
+def _one_game_archive(tmp_path: Path, pgn: str) -> Path:
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    game = {
+        "url": "u", "pgn": pgn, "time_class": "bullet", "rules": "chess", "end_time": 1,
+        "white": {"username": "Justin0921", "rating": 1500},
+        "black": {"username": "x", "rating": 1500},
+    }
+    (raw / "2023-11.json").write_text(json.dumps({"games": [game]}))
+    return raw
+
+
+def test_clocks_are_seconds_left_after_each_move(tmp_path):
+    pgn = ('[White "Justin0921"]\n[Black "x"]\n\n'
+           '1. e4 {[%clk 0:00:58.5]} 1... e5 {[%clk 0:00:57]} 2. Nf3 {[%clk 0:01:03.2]} *\n')
+    (game,) = load_games(_one_game_archive(tmp_path, pgn))
+    assert game.clocks == (58.5, 57.0, 63.2)
+
+
+def test_game_without_clocks_has_empty_clocks(tmp_path):
+    pgn = '[White "Justin0921"]\n[Black "x"]\n\n1. e4 e5 2. Nf3 *\n'
+    (game,) = load_games(_one_game_archive(tmp_path, pgn))
+    assert game.clocks == ()

@@ -92,3 +92,17 @@ def test_finetune_refuses_to_overwrite_existing_checkpoint(tmp_path):
     with pytest.raises(SystemExit):
         main(["finetune", "--examples", str(tmp_path / "nowhere"), "--out", str(existing)])
     assert existing.read_bytes() == b"x"
+
+
+def test_export_examples_leaves_out_scramble_moves(tmp_path):
+    from maia3.utils import get_all_possible_moves
+
+    from chessbot.cli import export_examples
+    from chessbot.examples import load_examples
+
+    move_index = {m: i for i, m in enumerate(get_all_possible_moves())}
+    skip = {"u0": {0}, "u1": {0}}  # the only White move of two training games
+    export_examples(_rated_raw_dir(tmp_path), "Justin0921", tmp_path / "ft", move_index, skip=skip)
+    train = load_examples(tmp_path / "ft" / "train.npz")
+    assert len(train) == 31 - 2
+    assert not {1000, 1001} & {e.self_elo for e in train}

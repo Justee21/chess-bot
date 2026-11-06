@@ -29,14 +29,18 @@ class HarnessPolicy:
         elo: int,
         temperature: float,
         min_count: int = 3,
+        min_p: float = 0.0,
     ):
         if temperature <= 0:
             raise ValueError("temperature must be positive")
+        if not 0.0 <= min_p <= 1.0:
+            raise ValueError("min_p must be between 0 and 1")
         self.table = table
         self.maia = maia
         self.elo = elo
         self.temperature = temperature
         self.min_count = min_count
+        self.min_p = min_p
 
     def distribution(self, board: chess.Board) -> tuple[dict[str, float], str]:
         if not any(board.legal_moves):
@@ -61,8 +65,15 @@ class HarnessPolicy:
             if p > 0 and not move_draws(board, chess.Move.from_uci(m))
         }
 
+    def _trim(self, pool: dict[str, float]) -> dict[str, float]:
+        """Drop moves whose probability is under `min_p` times the best move's, so a rare
+        slip is not sampled when one move is clearly right (the best move always stays)."""
+        cutoff = self.min_p * max(pool.values())
+        return {m: p for m, p in pool.items() if p >= cutoff}
+
     def choose(self, board: chess.Board, rng: random.Random) -> Choice:
-        """Sample a move. The bot never plays a move that draws the game unless every move does."""
+        """Sample a move. The bot never plays a move that draws the game unless every move does,
+        and never one far less likely than the best (`min_p`)."""
         dist, source = self.distribution(board)
         pool = self._playable(board, dist)
         if not pool and source == "table":
@@ -71,5 +82,6 @@ class HarnessPolicy:
         if not pool:  # Maia gave no non-drawing move weight; any non-drawing legal move beats a draw
             legal = {m.uci(): 1.0 for m in board.legal_moves}
             pool = self._playable(board, legal) or dist
+        pool = self._trim(pool)
         uci = rng.choices(list(pool), weights=list(pool.values()))[0]
         return Choice(chess.Move.from_uci(uci), source)

@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Collection, Iterable, Mapping, Sequence
 
 import chess
 import numpy as np
@@ -36,15 +36,18 @@ def build_examples(
     move_index: dict[str, int],
     bullet_weight: float = 0.5,
     history: int = 8,
+    skip: Mapping[str, Collection[int]] | None = None,
 ) -> list[Example]:
-    """One example per move Justin made; moves outside Maia's vocabulary are skipped."""
+    """One example per move Justin made; moves outside Maia's vocabulary are skipped, and so are
+    the plies listed for a game's url in `skip`."""
     examples: list[Example] = []
     for game in games:
         board = chess.Board()
         frames: deque = deque([_compress(tokenize_board(board))], maxlen=history)
         weight = bullet_weight if game.time_class == "bullet" else 1.0
-        for uci in game.moves:
-            if board.turn == game.my_color:
+        skipped = (skip or {}).get(game.url, ())
+        for ply, uci in enumerate(game.moves):
+            if board.turn == game.my_color and ply not in skipped:
                 black = board.turn == chess.BLACK
                 played = mirror_move(uci) if black else uci
                 if played in move_index:

@@ -129,3 +129,51 @@ def test_distribution_is_not_filtered_so_evaluation_stays_honest():
 def test_nonpositive_temperature_rejected():
     with pytest.raises(ValueError):
         HarnessPolicy(None, StubMaia(MAIA), elo=1500, temperature=0)
+
+
+def test_min_p_drops_moves_far_below_the_best_one():
+    maia = StubMaia({"e2e4": 0.97, "d2d4": 0.02, "g1f3": 0.01})
+    policy = HarnessPolicy(None, maia, elo=1500, temperature=1.0, min_p=0.05)
+    rng = random.Random(0)
+    picks = {policy.choose(chess.Board(), rng).move.uci() for _ in range(500)}
+    assert picks == {"e2e4"}
+
+
+def test_min_p_keeps_reasonable_alternatives():
+    policy = HarnessPolicy(None, StubMaia(MAIA), elo=1500, temperature=1.0, min_p=0.05)
+    rng = random.Random(0)
+    picks = {policy.choose(chess.Board(), rng).move.uci() for _ in range(500)}
+    assert picks == set(MAIA)
+
+
+def test_min_p_also_trims_one_off_table_moves():
+    games = [
+        Game(url=f"u{i}", end_time=i, time_class="blitz", my_color=chess.WHITE,
+             my_elo=1500, opp_elo=1500, moves=("c2c4" if i else "h2h4",))
+        for i in range(200)
+    ]
+    policy = HarnessPolicy(MoveTable.build(games), StubMaia(MAIA), elo=1500, temperature=1.0, min_p=0.05)
+    rng = random.Random(0)
+    picks = {policy.choose(chess.Board(), rng) for _ in range(2000)}
+    assert picks == {Choice(chess.Move.from_uci("c2c4"), "table")}
+
+
+def test_min_p_is_measured_against_the_best_playable_move():
+    # c1c7 stalemates and is the likeliest move; the best non-drawing move is c1c2, so it must survive.
+    board = chess.Board(STALEMATE_TRAP)
+    maia = StubMaia({"c1c7": 0.97, "c1c2": 0.02, "c1c3": 0.005})
+    policy = HarnessPolicy(None, maia, elo=1500, temperature=1.0, min_p=0.5)
+    rng = random.Random(0)
+    picks = {policy.choose(board, rng).move.uci() for _ in range(300)}
+    assert picks == {"c1c2"}
+
+
+def test_distribution_is_untouched_by_min_p():
+    policy = HarnessPolicy(None, StubMaia({"e2e4": 0.97, "d2d4": 0.03}), elo=1500, temperature=1.0, min_p=0.5)
+    dist, _ = policy.distribution(chess.Board())
+    assert dist["d2d4"] == pytest.approx(0.03)
+
+
+def test_min_p_out_of_range_rejected():
+    with pytest.raises(ValueError):
+        HarnessPolicy(None, StubMaia(MAIA), elo=1500, temperature=1.0, min_p=1.5)

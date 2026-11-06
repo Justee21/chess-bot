@@ -1,7 +1,7 @@
 """Centipawn loss and error profile, measured with a UCI engine such as Stockfish."""
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Collection, Sequence
 
 import chess
 import chess.engine
@@ -22,10 +22,21 @@ def _white_eval(engine, board: chess.Board, depth: int) -> int:
     return info["score"].white().score(mate_score=MATE_SCORE)
 
 
+def move_loss(engine, board: chess.Board, uci: str, depth: int = 12) -> float:
+    """Centipawn loss (capped) of playing `uci` on `board`, from the mover's view."""
+    before = _white_eval(engine, board, depth)
+    after_board = board.copy()
+    after_board.push_uci(uci)
+    after = _white_eval(engine, after_board, depth)
+    drop = before - after if board.turn == chess.WHITE else after - before
+    return min(max(0.0, float(drop)), LOSS_CAP)
+
+
 def game_cpls(
-    engine, moves: Sequence[str], color: chess.Color, depth: int = 12
+    engine, moves: Sequence[str], color: chess.Color, depth: int = 12, skip: Collection[int] = ()
 ) -> list[float]:
-    """Centipawn loss of each move played by `color`, one engine call per position."""
+    """Centipawn loss of each move played by `color`, one engine call per position.
+    `skip` holds ply indices (0-based) to leave out."""
     board = chess.Board()
     evals = [_white_eval(engine, board, depth)]
     for uci in moves:
@@ -34,7 +45,7 @@ def game_cpls(
     losses = []
     for i in range(len(moves)):
         mover = chess.WHITE if i % 2 == 0 else chess.BLACK
-        if mover != color:
+        if mover != color or i in skip:
             continue
         drop = evals[i] - evals[i + 1] if mover == chess.WHITE else evals[i + 1] - evals[i]
         losses.append(min(max(0.0, float(drop)), LOSS_CAP))

@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from typing import Callable, Iterable, Iterator, Sequence
+from typing import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 
 import chess
 
@@ -30,12 +30,16 @@ def classify_phase(board: chess.Board) -> str:
     return "endgame" if non_king_pieces <= 10 else "middlegame"
 
 
-def justin_positions(games: Iterable[Game]) -> Iterator[tuple[Game, chess.Board, str]]:
-    """Board before each of Justin's moves (with move history), and the UCI he played."""
+def justin_positions(
+    games: Iterable[Game], skip: Mapping[str, Collection[int]] | None = None
+) -> Iterator[tuple[Game, chess.Board, str]]:
+    """Board before each of Justin's moves (with move history), and the UCI he played.
+    Plies listed for a game's url in `skip` are left out."""
     for game in games:
         board = chess.Board()
-        for uci in game.moves:
-            if board.turn == game.my_color:
+        skipped = (skip or {}).get(game.url, ())
+        for ply, uci in enumerate(game.moves):
+            if board.turn == game.my_color and ply not in skipped:
                 yield game, board.copy(), uci
             board.push_uci(uci)
 
@@ -44,13 +48,14 @@ def evaluate(
     dist_fn: Callable[[chess.Board], tuple[dict[str, float], str]],
     games: Iterable[Game],
     max_games: int | None = None,
+    skip: Mapping[str, Collection[int]] | None = None,
 ) -> list[MoveResult]:
     """Score `dist_fn` on Justin's moves. `max_games` takes a seeded random sample."""
     games = list(games)
     if max_games is not None and max_games < len(games):
         games = random.Random(0).sample(games, max_games)
     results = []
-    for game, board, played in justin_positions(games):
+    for game, board, played in justin_positions(games, skip):
         dist, source = dist_fn(board)
         ranked = sorted(dist, key=lambda m: -dist[m])
         results.append(

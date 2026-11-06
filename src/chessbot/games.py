@@ -23,6 +23,7 @@ class Game:
     my_elo: int
     opp_elo: int
     moves: tuple[str, ...]  # whole game, UCI
+    clocks: tuple[float, ...] = ()  # seconds left on the mover's clock after each move; () if unknown
 
 
 def _get_json(url: str) -> dict:
@@ -42,13 +43,18 @@ def download_archives(username: str, out_dir: Path, delay: float = 0.3) -> int:
     return len(archives)
 
 
-def _parse_moves(pgn: str) -> tuple[str, ...]:
+def _parse_moves(pgn: str) -> tuple[tuple[str, ...], tuple[float, ...]]:
+    """Moves (UCI) and the clock after each move; the clocks are () unless every move has one."""
     game = chess.pgn.read_game(io.StringIO(pgn))
     if game is None or game.errors:
-        return ()
+        return (), ()
     if game.board().fen() != chess.STARTING_FEN:  # custom start position: not standard chess
-        return ()
-    return tuple(move.uci() for move in game.mainline_moves())
+        return (), ()
+    nodes = list(game.mainline())
+    clocks = [node.clock() for node in nodes]
+    if any(c is None for c in clocks):
+        clocks = []
+    return tuple(node.move.uci() for node in nodes), tuple(clocks)
 
 
 def load_games(raw_dir: Path, username: str = "Justin0921") -> list[Game]:
@@ -65,7 +71,7 @@ def load_games(raw_dir: Path, username: str = "Justin0921") -> list[Game]:
                 color, me, opp = chess.BLACK, black, white
             else:
                 continue
-            moves = _parse_moves(raw["pgn"])
+            moves, clocks = _parse_moves(raw["pgn"])
             if not moves:
                 continue
             games.append(
@@ -77,6 +83,7 @@ def load_games(raw_dir: Path, username: str = "Justin0921") -> list[Game]:
                     my_elo=me["rating"],
                     opp_elo=opp["rating"],
                     moves=moves,
+                    clocks=clocks,
                 )
             )
     games.sort(key=lambda g: g.end_time)

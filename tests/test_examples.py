@@ -136,3 +136,9 @@ def test_loaded_examples_own_their_arrays_instead_of_viewing_the_whole_file(tmp_
     save_examples(examples, path)
     for e in load_examples(path):
         assert e.frames.flags.owndata and e.legal.flags.owndata
+
+
+def test_skipped_plies_produce_no_examples():
+    kept = build_examples([_game(OPENING)], MOVE_INDEX, skip={"u": {2}})
+    assert [e.target for e in kept] == [MOVE_INDEX[m] for m in ("e2e4", "f1c4")]
+    assert len(build_examples([_game(OPENING)], MOVE_INDEX, skip={"other": {2}})) == 3
