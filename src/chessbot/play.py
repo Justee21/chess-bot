@@ -31,6 +31,23 @@ def log_blind(path: Path, entry: dict) -> None:
         f.write(json.dumps(entry) + "\n")
 
 
+def load_blind_rows(path: Path) -> list[dict]:
+    """Every logged blind-test row; empty if nothing has been logged yet."""
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def tally_judgments(rows: Sequence[dict], names: Sequence[str]) -> dict[str, tuple[int, int]]:
+    """(games judged "plays like me", games judged) per model; rows without a judgment are skipped."""
+    out = {name: [0, 0] for name in names}
+    for row in rows:
+        if row.get("actual") in out and "like_me" in row:
+            out[row["actual"]][1] += 1
+            out[row["actual"]][0] += bool(row["like_me"])
+    return {name: (yes, total) for name, (yes, total) in out.items()}
+
+
 def parse_move(board: chess.Board, text: str) -> chess.Move:
     """A legal move from SAN ("Nf3", "e4") or UCI ("g1f3"); ValueError if it is neither."""
     text = text.strip()

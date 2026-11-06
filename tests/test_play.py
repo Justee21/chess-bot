@@ -91,3 +91,28 @@ def test_log_blind_appends_one_json_line_per_game(tmp_path):
     log_blind(path, {"actual": "base", "guess": "base", "result": "*"})
     rows = [json.loads(line) for line in path.read_text().splitlines()]
     assert [r["actual"] for r in rows] == ["ft2", "base"]
+
+
+def test_tally_judgments_counts_yes_per_model_and_ignores_unfinished_rows():
+    from chessbot.play import tally_judgments
+
+    rows = [
+        {"actual": "ft2", "like_me": True},
+        {"actual": "ft2", "like_me": False},
+        {"actual": "ft2", "like_me": True},
+        {"actual": "base", "like_me": False},
+        {"actual": "ft1"},
+    ]
+    assert tally_judgments(rows, ["base", "ft1", "ft2"]) == {
+        "base": (0, 1), "ft1": (0, 0), "ft2": (2, 3),
+    }
+
+
+def test_load_blind_rows_skips_missing_file_and_blank_lines(tmp_path):
+    from chessbot.play import load_blind_rows, log_blind
+
+    path = tmp_path / "blind.jsonl"
+    assert load_blind_rows(path) == []
+    log_blind(path, {"actual": "ft1", "like_me": True})
+    path.write_text(path.read_text() + "\n")
+    assert load_blind_rows(path) == [{"actual": "ft1", "like_me": True}]

@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> None:
     play.add_argument("--tuned", type=Path, default=Path("data/temperature.json"))
     play.add_argument("--seed", type=int, default=None)
 
-    blind = sub.add_parser("blind", help="play a hidden model (base, ft1 or ft2), then guess which it was")
+    blind = sub.add_parser("blind", help="play a hidden model (base, ft1 or ft2), judge if it plays like you, then see the tally")
     blind.add_argument("--raw", type=Path, default=Path("data/raw"))
     blind.add_argument("--table", type=Path, default=Path("data/table.json"))
     blind.add_argument("--model", default="maia3-23m")
@@ -359,7 +359,7 @@ def main(argv: list[str] | None = None) -> None:
 
     elif args.command == "blind":
         from chessbot.maia import MaiaPredictor
-        from chessbot.play import choose_color, log_blind, pick_blind, play_game_vs_human
+        from chessbot.play import choose_color, load_blind_rows, log_blind, pick_blind, play_game_vs_human, tally_judgments
         from chessbot.policy import HarnessPolicy
 
         # name -> (checkpoint, calibration, tuned temperature)
@@ -377,16 +377,18 @@ def main(argv: list[str] | None = None) -> None:
         maia = MaiaPredictor(args.model, checkpoint=Path(checkpoint) if checkpoint else None)
         policy = HarnessPolicy(MoveTable.load(args.table), maia, elo, temperature, min_p=args.min_p)
         print(f"Blind test: you are {'White' if human == chess.WHITE else 'Black'}. "
-              "The opponent is base, ft1 or ft2 and stays hidden until you guess. "
+              "The opponent is base, ft1 or ft2 and stays hidden until you judge it. "
               "Moves like e4, Nf3, O-O or e2e4.")
         result = play_game_vs_human(policy, human, rng)
         print(f"Result: {result}")
-        guess = ""
-        while guess not in models:
-            guess = input("Which one was it? (base / ft1 / ft2): ").strip().lower()
-        log_blind(args.log, {"actual": actual, "guess": guess, "result": result,
+        answer = ""
+        while answer not in {"y", "n"}:
+            answer = input("Did that play like you? (y / n): ").strip().lower()
+        log_blind(args.log, {"actual": actual, "like_me": answer == "y", "result": result,
                              "human": "white" if human == chess.WHITE else "black"})
-        print(f"It was {actual}. You guessed {'right' if guess == actual else 'wrong'}.")
+        print(f"That was {actual}. Tally of games judged \"plays like me\":")
+        for name, (yes, total) in tally_judgments(load_blind_rows(args.log), list(models)).items():
+            print(f"  {name}: {yes}/{total}")
 
     elif args.command == "tune-temperature":
         from chessbot.maia import MaiaPredictor
