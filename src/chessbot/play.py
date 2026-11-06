@@ -12,6 +12,14 @@ from chessbot.policy import HarnessPolicy
 from chessbot.rules import is_finished
 
 
+class EarlyVerdict(Exception):
+    """The human pressed y or n mid-game to judge the bot before the game ended."""
+
+    def __init__(self, like_me: bool):
+        super().__init__("y" if like_me else "n")
+        self.like_me = like_me
+
+
 def choose_color(color: str, rng: random.Random) -> chess.Color:
     """The human's color from "white", "black" or "random" (chess.BLACK is falsy, so compare strings)."""
     if color == "random":
@@ -79,8 +87,9 @@ def play_game_vs_human(
     rng: random.Random,
     read: Callable[[str], str] = input,
     write: Callable[[str], None] = print,
+    judging: bool = False,
 ) -> str:
-    """Play until the game ends or the human types quit. Returns "1-0", "0-1", "1/2-1/2" or "*"."""
+    """Play until the game ends or the human types quit (when `judging`, y or n raises EarlyVerdict). Returns "1-0", "0-1", "1/2-1/2" or "*"."""
     board = chess.Board()
     write(board.unicode(borders=True, orientation=human))
     while not is_finished(board):
@@ -91,6 +100,8 @@ def play_game_vs_human(
                 return "*"
             if text.strip().lower() in {"quit", "exit"}:
                 return "*"
+            if judging and text.strip().lower() in {"y", "n"}:
+                raise EarlyVerdict(text.strip().lower() == "y")
             try:
                 move = parse_move(board, text)
             except ValueError:

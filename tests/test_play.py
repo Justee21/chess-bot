@@ -116,3 +116,24 @@ def test_load_blind_rows_skips_missing_file_and_blank_lines(tmp_path):
     log_blind(path, {"actual": "ft1", "like_me": True})
     path.write_text(path.read_text() + "\n")
     assert load_blind_rows(path) == [{"actual": "ft1", "like_me": True}]
+
+
+def test_y_or_n_mid_game_ends_it_with_a_verdict_only_when_judging():
+    from chessbot.play import EarlyVerdict
+
+    policy = HarnessPolicy(None, StubMaia({}), elo=1500, temperature=1.0)
+    for key, expected in [("y", True), ("N", False)]:
+        typed = iter(["e4", key])
+        with pytest.raises(EarlyVerdict) as caught:
+            play_game_vs_human(
+                policy, human=chess.WHITE, rng=random.Random(0),
+                read=lambda prompt: next(typed), write=lambda line: None, judging=True,
+            )
+        assert caught.value.like_me is expected
+    typed = iter(["y", "quit"])
+    lines: list[str] = []
+    play_game_vs_human(
+        policy, human=chess.WHITE, rng=random.Random(0),
+        read=lambda prompt: next(typed), write=lines.append,
+    )
+    assert any("not a legal move" in line.lower() for line in lines)

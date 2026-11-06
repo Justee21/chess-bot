@@ -359,7 +359,7 @@ def main(argv: list[str] | None = None) -> None:
 
     elif args.command == "blind":
         from chessbot.maia import MaiaPredictor
-        from chessbot.play import choose_color, load_blind_rows, log_blind, pick_blind, play_game_vs_human, tally_judgments
+        from chessbot.play import EarlyVerdict, choose_color, load_blind_rows, log_blind, pick_blind, play_game_vs_human, tally_judgments
         from chessbot.policy import HarnessPolicy
 
         # name -> (checkpoint, calibration, tuned temperature)
@@ -378,12 +378,16 @@ def main(argv: list[str] | None = None) -> None:
         policy = HarnessPolicy(MoveTable.load(args.table), maia, elo, temperature, min_p=args.min_p)
         print(f"Blind test: you are {'White' if human == chess.WHITE else 'Black'}. "
               "The opponent is base, ft1 or ft2 and stays hidden until you judge it. "
-              "Moves like e4, Nf3, O-O or e2e4.")
-        result = play_game_vs_human(policy, human, rng)
-        print(f"Result: {result}")
-        answer = ""
-        while answer not in {"y", "n"}:
-            answer = input("Did that play like you? (y / n): ").strip().lower()
+              "Moves like e4, Nf3, O-O or e2e4. Press y or n at any time to judge: "
+              "does it play like you?")
+        try:
+            result = play_game_vs_human(policy, human, rng, judging=True)
+            print(f"Result: {result}")
+            answer = ""
+            while answer not in {"y", "n"}:
+                answer = input("Did that play like you? (y / n): ").strip().lower()
+        except EarlyVerdict as verdict:
+            result, answer = "judged early", str(verdict)
         log_blind(args.log, {"actual": actual, "like_me": answer == "y", "result": result,
                              "human": "white" if human == chess.WHITE else "black"})
         print(f"That was {actual}. Tally of games judged \"plays like me\":")
