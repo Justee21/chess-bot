@@ -113,7 +113,7 @@ def play_game_vs_human(
             san = board.san(choice.move)
             board.push(choice.move)
             note = "from your opening book" if choice.source == "table" else "Maia"
-            write(f"Bot plays {san}  ({note})")
+            write(f"Bot plays {san}" if judging else f"Bot plays {san}  ({note})")
         write(board.unicode(borders=True, orientation=human))
     write(_ending(board))
     return board.result(claim_draw=True)

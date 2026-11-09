@@ -137,3 +137,16 @@ def test_y_or_n_mid_game_ends_it_with_a_verdict_only_when_judging():
         read=lambda prompt: next(typed), write=lines.append,
     )
     assert any("not a legal move" in line.lower() for line in lines)
+
+
+def test_judging_mode_does_not_reveal_where_the_bot_move_came_from():
+    policy = HarnessPolicy(None, StubMaia({}), elo=1500, temperature=1.0)
+    for judging, expect_note in [(True, False), (False, True)]:
+        typed = iter(["e4", "quit"])
+        lines: list[str] = []
+        play_game_vs_human(
+            policy, human=chess.WHITE, rng=random.Random(0),
+            read=lambda prompt: next(typed), write=lines.append, judging=judging,
+        )
+        bot_line = next(line for line in lines if line.startswith("Bot plays"))
+        assert ("Maia" in bot_line) is expect_note
