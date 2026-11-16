@@ -3,3 +3,12 @@ __pycache__/
 .venv/
 *.egg-info/
 .pytest_cache/
+.env
+.env.*
+!.env.example
+config.yml
+*.token
+*.log
+*.pgn
+.DS_Store
+lichess-bot/

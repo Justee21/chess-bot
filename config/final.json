@@ -1,0 +1,16 @@
+{
+  "frozen": "2026-11-15",
+  "model": "fine-tune 2 (time-scramble moves removed)",
+  "checkpoint": "data/finetuned-23m-clean.pt",
+  "checkpoint_sha256": "7068d98fa1bb3250081cdf506d35d45e46e91352b52a4802da0091e6b0ee8105",
+  "base_model": "maia3-23m (maia3 commit 1e13597)",
+  "elo_input": 1500,
+  "temperature": 1.2,
+  "min_p": 0.05,
+  "table": "data/table.json",
+  "table_sha256": "55e8acf9149653626c4e3570f26f9bd5545f9aa48b3ab27cddaa8937847f1b51",
+  "table_min_count": 3,
+  "rules": {"resign": false, "offer_or_accept_draws": false, "search": false},
+  "calibration_file": "data/calibration-ft-clean.json",
+  "temperature_file": "data/temperature-ft-clean.json"
+}

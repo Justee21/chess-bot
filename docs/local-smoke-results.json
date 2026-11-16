@@ -1,0 +1,19 @@
+{
+  "uci_selfplay_plies": 40,
+  "stockfish_games": [
+    {
+      "bot_color": "white",
+      "plies": 114,
+      "result": "0-1",
+      "stockfish_skill": 0,
+      "complete": true
+    },
+    {
+      "bot_color": "black",
+      "plies": 97,
+      "result": "1/2-1/2",
+      "stockfish_skill": 0,
+      "complete": true
+    }
+  ]
+}
