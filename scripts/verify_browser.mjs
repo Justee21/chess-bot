@@ -60,7 +60,7 @@ const result=await page.evaluate(async()=>{
 });
 console.log(JSON.stringify(result,null,2));
 const coldChunkRequests=chunkRequests;
-await page.getByRole('button',{name:'Play Justin',exact:true}).click();
+await page.getByRole('button',{name:'Play Me',exact:true}).click();
 await page.waitForFunction(()=>document.querySelector('[data-status]').textContent==='Your turn.',{timeout:120000});
 await page.locator('[data-square="e2"]').click();await page.locator('[data-square="e4"]').click();
 await page.waitForFunction(()=>document.querySelector('[data-moves]').textContent.trim().split(/\s+/).length>=3 && document.querySelector('[data-status]').textContent==='Your turn.',{timeout:30000});

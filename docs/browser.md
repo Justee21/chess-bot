@@ -1,8 +1,8 @@
-# Play Justin in a browser
+# Play Me in a browser
 
-The browser version runs the frozen fine-tune 2 policy locally in a Web Worker. It needs static HTTPS hosting, not a model server or Lichess token. Click **Play Justin** to load the model and reveal the board. Visitors choose White or Black and can start a new game.
+The browser version runs the frozen fine-tune 2 policy locally in a Web Worker. It needs static HTTPS hosting, not a model server or Lichess token. Click **Play Me** to load the model and reveal the board. Visitors choose White or Black, start a new game, or close the board and reopen it without resetting the game or reloading the model.
 
-The standalone demo is published at https://justee21.github.io/chess-bot/web/. The personal website embeds this same demo, so the model files are maintained in one repository. Files load only after the visitor clicks Play Justin.
+The standalone demo is published at https://justee21.github.io/chess-bot/web/. The personal website embeds this same demo, so the model files are maintained in one repository. Files load only after the visitor clicks Play Me.
 
 ## What ships
 

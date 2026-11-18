@@ -22,9 +22,9 @@ The selected bot's self-play average centipawn loss was $66.2$, compared with $6
 
 ## Play on the website
 
-[**Play Justin**](https://justee21.github.io/chess-bot/web/)
+[**Play Me**](https://justee21.github.io/chess-bot/web/)
 
-Click Play Justin to reveal the board, then choose White or Black. The model runs on your device, with no clock. First use downloads roughly $106\,\mathrm{MB}$ of model and runtime files; later games can use your browser’s cache. [Browser implementation, parity checks, and build instructions](docs/browser.md).
+Click Play Me to reveal the board, then choose White or Black. The model runs on your device, with no clock. First use downloads roughly $106\,\mathrm{MB}$ of model and runtime files; later games can use your browser’s cache. [Browser implementation, parity checks, and build instructions](docs/browser.md).
 
 ## Run the frozen bot
 

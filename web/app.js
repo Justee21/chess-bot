@@ -10,9 +10,9 @@ let game = new Chess(), human='w', selected=null, lastMove=null;
 let worker, loaded=false, loading=false, thinking=false, serial=0, activeRequest=0, pendingPromotion;
 
 function turnMessage() {
-  if (game.isCheckmate()) return game.turn() === human ? 'Checkmate. Justin wins.' : 'Checkmate. You win.';
-  if (finished(game)) return 'Draw. Play again?';
-  return `${game.turn() === human ? 'Your turn' : 'Justin is thinking…'}${game.isCheck() ? ' — check' : ''}${game.turn() === human ? '.' : ''}`;
+  if (game.isCheckmate()) return game.turn() === human ? 'Checkmate. I win—good game!' : 'Checkmate. You win—good game!';
+  if (finished(game)) return 'A draw—good game! Play again?';
+  return `${game.turn() === human ? 'Your turn' : 'I’m thinking…'}${game.isCheck() ? ' — check' : ''}${game.turn() === human ? '.' : ''}`;
 }
 
 function render() {
@@ -104,7 +104,7 @@ function start() {
   $('[data-game]').hidden=false;$('[data-start]').hidden=true;render();
   if(loaded){requestMove();return;}if(loading)return;
   if(typeof WebAssembly!=='object'||typeof Worker!=='function'||!crypto.subtle){fail('This browser cannot run the bot. Try a current browser.');return;}
-  loading=true;status.textContent='Downloading Justin for your first game…';
+  loading=true;status.textContent='Loading the model for your first game…';
   worker=new Worker(new URL('worker.js',import.meta.url));
   worker.onerror=event=>fail(event.message || 'The bot could not start.');
   worker.onmessage=event=>{
@@ -113,7 +113,7 @@ function start() {
       $('[data-download]').hidden=false;
       $('[data-download] progress').value=100*message.loaded/message.total;
       status.textContent=`Loading the bot: ${(message.loaded/1e6).toFixed(0)} / ${(message.total/1e6).toFixed(0)} MB`;
-    } else if(message.type==='compiling') {status.textContent='Getting Justin ready…';$('[data-download]').hidden=true;}
+    } else if(message.type==='compiling') {status.textContent='Getting ready…';$('[data-download]').hidden=true;}
     else if(message.type==='ready') {loaded=true;loading=false;$('[data-download]').hidden=true;render();requestMove();}
     else if(message.type==='move') {
       if(message.id!==activeRequest)return;
@@ -129,6 +129,16 @@ function start() {
 
 $('[data-start]').addEventListener('click',start);
 $('[data-new]').addEventListener('click',()=>reset());
+$('[data-close]').addEventListener('click',()=>{
+  if(parameters.has('embed') && parent !== window) {
+    parent.postMessage({type:'justin-chess-close'},location.origin);
+  } else {
+    $('[data-game]').hidden=true;
+    $('[data-start]').hidden=false;
+    $('[data-start]').textContent='Play Me';
+    $('[data-start]').focus();
+  }
+});
 for(const button of host.querySelectorAll('[data-color]')) button.addEventListener('click',()=>reset(button.dataset.color));
 boardElement.addEventListener('keydown',event=>{
   if(event.key==='Escape'){selected=null;render();return;}
