@@ -18,7 +18,7 @@ Fine-tune 2 excludes bullet moves made with at most $5$ seconds remaining after 
 
 I also played blinded trials and judged whether the bot played like me. In the final focused set, base passed $0/7$, fine-tune 1 passed $1/6$, and fine-tune 2 passed $3/7$. I was the only judge, and the sample is small. These are subjective play trials, not a controlled strength test. The local log does not preserve the moves or trial lengths. See [the blind-test report](docs/results/blind-and-freeze-2026-11-15.md), including the earlier trials reported from the preceding session.
 
-The selected bot's self-play average centipawn loss was $66.2$, compared with $66.8$ in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured Lichess rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
+The selected bot's self-play average centipawn loss was $66.2$, compared with $66.8$ in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured playing rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
 
 ## Play on the website
 
@@ -28,13 +28,13 @@ Click Play Justin to reveal the board, then choose White or Black. The model run
 
 ## Run the frozen bot
 
-Requires Python $3.11$ or later for the Lichess bridge; the model runs on CPU. Create the environment in the repository root:
+The model runs on CPU. Create the environment in the repository root:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e '.[inference,lichess,dev]'
+python -m pip install -e '.[inference,dev]'
 python scripts/fetch_artifacts.py
 ```
 
@@ -68,12 +68,6 @@ python -m chessbot.uci --config config/final.json
 | Search / resignation / draw offers or acceptance | Disabled |
 
 The cutoff is relative to the most likely playable move, not an absolute probability threshold. Temperature affects the model distribution; table hits use empirical frequencies. The existing policy avoids immediately drawing moves when alternatives exist, but forced and automatic draws can still happen.
-
-## Lichess
-
-The model is connected through UCI to the standard [lichess-bot bridge](https://github.com/lichess-bot-devs/lichess-bot). [Deployment instructions](docs/lichess.md) cover the dedicated bot account, token, configuration, local tests, and running it on a Mac or server.
-
-Initial configuration: standard chess, casual blitz/rapid, one concurrent game, no matchmaking, no external opening books or tablebases, no takebacks, no artificial thinking delay. These are service settings; they do not change the frozen move policy. No public bot account or uptime is claimed until a live game has been tested.
 
 ## Reproduce the experiments
 
@@ -113,4 +107,4 @@ Tests marked `slow` require model weights and/or Stockfish and are excluded by d
 
 Raw Chess.com archives, training examples, local play logs, and access tokens are excluded from Git and releases. The repository contains synthetic game fixtures for tests. The released table contains board positions and move counts, so my repertoire is public; it contains no player names or game URLs.
 
-Code and released fine-tuned weights are distributed under [AGPL-3.0-or-later](LICENSE). Maia 3 is by the University of Toronto CSSLab; its original code and license remain available at the [pinned revision](https://github.com/CSSLab/maia3/tree/1e13597c42d4858b7cfd7cfdae01e297263364b2). The Lichess bridge is a separate AGPL project. See [attribution](NOTICE.md).
+Code and released fine-tuned weights are distributed under [AGPL-3.0-or-later](LICENSE). Maia 3 is by the University of Toronto CSSLab; its original code and license remain available at the [pinned revision](https://github.com/CSSLab/maia3/tree/1e13597c42d4858b7cfd7cfdae01e297263364b2). See [attribution](NOTICE.md).
