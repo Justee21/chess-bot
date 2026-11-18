@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Play Justin · Justin Roberts</title>
+  <link rel="stylesheet" href="board.css">
+</head>
+<body class="chess-page">
+  <main class="justin-chess" data-justin-chess>
+    <h1>Play Justin</h1>
+    <p class="intro">A chess bot I fine-tuned to play like me. No clock—take your time.</p>
+    <button class="text-button launch" type="button" data-start>Play Justin</button>
+    <div data-game hidden>
+      <div class="game-controls" aria-label="Game controls">
+        <div class="color-controls" role="group" aria-label="Your color">
+          <button type="button" data-color="w" aria-pressed="true">Play as White</button>
+          <button type="button" data-color="b" aria-pressed="false">Play as Black</button>
+        </div>
+        <button class="text-button" type="button" data-new>New game</button>
+      </div>
+      <p class="status" data-status role="status" aria-live="polite">Getting the bot ready…</p>
+      <div class="download" data-download hidden><progress max="100" value="0" aria-label="Model download"></progress></div>
+      <div class="board-frame">
+        <div class="board" data-board role="group" aria-label="Chessboard"></div>
+        <div class="promotion" data-promotion hidden role="dialog" aria-label="Choose a promotion piece" aria-modal="true">
+          <p>Promote to</p>
+          <div data-promotion-options></div>
+        </div>
+      </div>
+      <p class="hint" data-hint>Click or tap a piece, then its destination.</p>
+      <div class="moves" data-moves aria-label="Moves played"></div>
+    </div>
+    <p class="footnote">Runs on your device. The first play downloads about 106 MB, then your browser can cache it.</p>
+    <p class="source"><a href="https://github.com/Justee21/chess-bot" target="_blank" rel="noopener">Code &amp; model</a></p>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -12,3 +12,4 @@ config.yml
 *.pgn
 .DS_Store
 lichess-bot/
+node_modules/

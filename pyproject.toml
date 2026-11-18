@@ -15,6 +15,7 @@ license = { text = "AGPL-3.0-or-later" }
 dev = ["pytest"]
 inference = ["maia3 @ git+https://github.com/CSSLab/maia3.git@1e13597c42d4858b7cfd7cfdae01e297263364b2"]
 lichess = ["PyYAML>=6,<7"]
+browser = ["onnx==1.23.2", "onnxruntime==1.32.0", "onnxscript==0.7.2", "torch==2.15.0"]
 
 [project.scripts]
 chessbot = "chessbot.cli:main"

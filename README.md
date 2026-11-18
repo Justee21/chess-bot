@@ -20,6 +20,12 @@ I also played blinded trials and judged whether the bot played like me. In the f
 
 The selected bot's self-play average centipawn loss was $66.2$, compared with $66.8$ in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured Lichess rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
 
+## Play on the website
+
+[**Play Justin**](https://justee21.github.io/chess-bot/web/)
+
+Click Play Justin to reveal the board, then choose White or Black. The model runs on your device, with no clock. First use downloads roughly $106\,\mathrm{MB}$ of model and runtime files; later games can use your browser’s cache. [Browser implementation, parity checks, and build instructions](docs/browser.md).
+
 ## Run the frozen bot
 
 Requires Python $3.11$ or later for the Lichess bridge; the model runs on CPU. Create the environment in the repository root:

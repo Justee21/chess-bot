@@ -1,0 +1,15 @@
+{
+  "positions": 128,
+  "top1Agreement": 128,
+  "maxLogitAbsoluteError": 3.4332275390625e-05,
+  "maxLegalProbabilityAbsoluteError": 4.554314245397428e-06,
+  "nativeOnnxMedianMs": 12.213228998007253,
+  "modelBytes": 91616257,
+  "precision": "float32",
+  "quantized": false,
+  "tablePositions": 2580,
+  "tableBytes": 213672,
+  "torch": "2.15.0",
+  "onnx": "1.23.2",
+  "onnxruntime": "1.32.0"
+}

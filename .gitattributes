@@ -1,0 +1,3 @@
+web/model-*.bin binary
+web/vendor/ort/*.wasm binary
+web/vendor/** -whitespace

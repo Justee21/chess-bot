@@ -1,0 +1,14 @@
+{
+  "name": "justin-chess-browser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vendor:web": "node scripts/vendor_browser.mjs",
+    "test:browser": "node scripts/verify_browser.mjs"
+  },
+  "devDependencies": {
+    "chess.js": "1.4.0",
+    "onnxruntime-web": "1.31.1",
+    "playwright": "1.65.1"
+  }
+}

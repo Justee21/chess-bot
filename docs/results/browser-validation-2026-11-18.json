@@ -1,0 +1,22 @@
+{
+  "positions": 48,
+  "verifiedTableKeys": 2580,
+  "tokenization": "exact match",
+  "maxModelProbabilityError": 5.581163808998646e-06,
+  "maxPolicyProbabilityError": 4.843307349733372e-06,
+  "loadLocalMs": 1085.3999999761581,
+  "medianEvaluationMs": 100,
+  "browserEngine": "Chromium",
+  "platform": "macOS",
+  "wasmThreads": 1,
+  "modelChunksReusedFromCache": true,
+  "uiChecks": [
+    "lazy download before click",
+    "White move and bot reply",
+    "Black orientation and bot opening",
+    "new game",
+    "mobile viewport without horizontal overflow",
+    "website iframe resizing"
+  ],
+  "webkit": "Not tested: browser-engine download failed"
+}

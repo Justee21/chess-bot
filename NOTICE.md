@@ -11,3 +11,5 @@ This project fine-tunes the `maia3-23m` Maia 3 model and uses its inference impl
 The released `finetuned-23m-clean.pt` modifies Maia 3 through supervised fine-tuning on Justin Roberts's own moves. Its SHA-256 and deployment parameters are recorded in `config/final.json`. The position table is built from his pre-test games.
 
 Lichess integration uses the separate [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) project at revision `06f4f10b5a5a70549b9fc5f8f759a532723b5dab`, licensed AGPL-3.0-or-later. Its code is not vendored in this repository.
+
+Browser dependencies: chess.js 1.4.0 (BSD-2-Clause; `web/vendor/chess-LICENSE`) and ONNX Runtime Web 1.31.1 (MIT; `web/vendor/ort/LICENSE`). Copyright notices are preserved in their vendored distributions. The FP32 ONNX export is derived from the same frozen fine-tuned checkpoint, without quantization or training.

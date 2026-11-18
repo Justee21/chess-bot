@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "precision": "float32",
+  "history": 8,
+  "channels": 96,
+  "elo": 1500,
+  "temperature": 1.2,
+  "minP": 0.05,
+  "tableMinCount": 3,
+  "checkpointSha256": "7068d98fa1bb3250081cdf506d35d45e46e91352b52a4802da0091e6b0ee8105",
+  "sourceTableSha256": "55e8acf9149653626c4e3570f26f9bd5545f9aa48b3ab27cddaa8937847f1b51",
+  "model": {
+    "bytes": 91616257,
+    "sha256": "50024d31f88746968bb8cd57557253e7bd755093d0ce22c86f9f58f62c2725f0",
+    "parts": [
+      {
+        "file": "model-01.bin",
+        "bytes": 33554432,
+        "sha256": "0bff0f69cfc268620cbe7ed4320e17da622ca7ab05d1dc76a711950c31dcd355"
+      },
+      {
+        "file": "model-02.bin",
+        "bytes": 33554432,
+        "sha256": "f6ac1e65a9149155c39dddd9cf1f216a377441125d2f24caf341eceb171d7415"
+      },
+      {
+        "file": "model-03.bin",
+        "bytes": 24507393,
+        "sha256": "4b9442d282a0f3359c743b5a25df8a5414903ca302b7ae51dc7f4de33af06fce"
+      }
+    ]
+  },
+  "table": {
+    "file": "table.json",
+    "bytes": 213672,
+    "sha256": "6b34da9b2b5209cdfef962472b8dcc70c102dea823d61a4deb32f625fd750a17",
+    "positions": 2580
+  }
+}
