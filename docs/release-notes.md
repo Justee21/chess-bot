@@ -11,9 +11,9 @@ First public release of Justin Roberts's personal chess imitation bot.
 
 ## Validation
 
-Standard suite: $133$ tests passed, with $14$ slow tests deselected.
+Standard suite: 133 tests passed, with 14 slow tests deselected.
 
-The real checkpoint completed UCI initialization and $40$ legal self-play plies. It also completed two local games against Stockfish at skill $0$, one per color, with legal moves throughout. The generated deployment config was accepted by the pinned lichess-bot revision. These are local integration checks, not a strength estimate or a live Lichess test.
+The real checkpoint completed UCI initialization and 40 legal self-play plies. It also completed two local games against Stockfish at skill 0, one per color, with legal moves throughout. The generated deployment config was accepted by the pinned lichess-bot revision. These are local integration checks, not a strength estimate or a live Lichess test.
 
 ## Frozen policy
 
@@ -22,5 +22,5 @@ The real checkpoint completed UCI initialization and $40$ legal self-play plies.
 - Table: `table.json`
 - SHA-256: `55e8acf9149653626c4e3570f26f9bd5545f9aa48b3ab27cddaa8937847f1b51`
 - Maia 3 revision: `1e13597c42d4858b7cfd7cfdae01e297263364b2`
-- Elo input $1500$, temperature $1.2$, relative cutoff $0.05$, minimum table position count $3$.
+- Elo input 1500, temperature 1.2, relative cutoff 0.05, minimum table position count 3.
 - No search, resignation, or draw offers/acceptance. Forced and automatic draws remain possible.

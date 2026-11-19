@@ -6,7 +6,7 @@ Follow the install and artifact-download steps in the [README](../README.md). Th
 
 ## Prepare the bridge
 
-Use Python $3.11$ or later. From this repository, with `.venv` activated:
+Use Python 3.11 or later. From this repository, with `.venv` activated:
 
 ```bash
 git clone https://github.com/lichess-bot-devs/lichess-bot.git lichess-bot
@@ -17,7 +17,7 @@ python scripts/configure_lichess.py --bridge lichess-bot
 
 The generator refuses to overwrite an existing bridge config. It creates `lichess-bot/config.yml` with absolute engine paths and an environment-token placeholder. That directory is ignored by Git. Run the generator again on a new host because its paths will differ.
 
-Initial service configuration accepts standard casual blitz/rapid with at least $180$ seconds base time, at most $1800$ seconds base and $30$ seconds increment. It caps concurrency at one game. Matchmaking and takebacks are disabled. External books, cloud analysis, tablebases, pondering, resignation, and draw offers/acceptance are disabled. All chat greetings are blank.
+Initial service configuration accepts standard casual blitz/rapid with at least 180 seconds base time, at most 1800 seconds base and 30 seconds increment. It caps concurrency at one game. Matchmaking and takebacks are disabled. External books, cloud analysis, tablebases, pondering, resignation, and draw offers/acceptance are disabled. All chat greetings are blank.
 
 The policy still samples moves and avoids immediate draws as it did during the play trials. Forced and automatic draws remain possible. It does not use the game's actual ratings or clock as model inputs. No artificial delay is added.
 
@@ -61,7 +61,7 @@ python -m chessbot.uci --config config/final.json
 
 For a manual UCI check, enter `uci`, `isready`, `position startpos moves e2e4`, `go`, and `quit`. The responses include `uciok`, `readyok`, and one legal `bestmove`. Model diagnostics go to stderr. Artifact hash mismatches stop startup instead of silently falling back to base Maia.
 
-Before release, also run actual model communication through `python-chess` and local games against Stockfish at skill $0$. These establish integration and legal play, not a human strength estimate. Live authentication, account conversion, challenge acceptance, and reconnection still require separate online checks.
+Before release, also run actual model communication through `python-chess` and local games against Stockfish at skill 0. These establish integration and legal play, not a human strength estimate. Live authentication, account conversion, challenge acceptance, and reconnection still require separate online checks.
 
 ## Keeping it available
 
@@ -73,4 +73,4 @@ caffeinate -i ../.venv/bin/python lichess-bot.py
 
 For continuous availability, install the same pinned software on an always-on Linux host and run the bridge under a process supervisor. Keep the token in the host's secret/environment configuration. No hosting service or paid resources are created by this repository.
 
-Once the account is live, link to its Lichess profile from the website and state the actual uptime arrangement. The initial casual-only configuration produces no rating. If rated play is enabled later, it is a service change; Maia's fixed $1500$ conditioning input is not a measured Lichess rating.
+Once the account is live, link to its Lichess profile from the website and state the actual uptime arrangement. The initial casual-only configuration produces no rating. If rated play is enabled later, it is a service change; Maia's fixed 1500 conditioning input is not a measured Lichess rating.

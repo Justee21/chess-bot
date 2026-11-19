@@ -6,25 +6,25 @@ There is no search. The goal is to predict my moves and match my playing style.
 
 ## Results
 
-The original dataset has $10{,}040$ standard-chess games for `Justin0921`. The newest $1{,}506$ games are held out for testing. The move-prediction columns below use the same $52{,}965$ test positions for every model, excluding flagged time-scramble moves, with Elo input $1700$ and temperature $1$. These scores evaluate the model alone, without the position table.
+The original dataset has 10,040 standard-chess games for `Justin0921`. The newest 1,506 games are held out for testing. The move-prediction columns below use the same 52,965 test positions for every model, excluding flagged time-scramble moves, with Elo input 1700 and temperature 1. These scores evaluate the model alone, without the position table.
 
 | Model | Top-1 move prediction | Opening | Middlegame | Endgame | Blind “plays like me” |
 | --- | --- | --- | --- | --- | --- |
-| Base Maia 3 | $59.1\%$ | $61.0\%$ | $58.1\%$ | $59.4\%$ | $0/7$ ($0\%$) |
-| Fine-tune 1 | $63.8\%$ | $72.4\%$ | $60.4\%$ | $60.7\%$ | $1/6$ ($16.7\%$) |
-| Fine-tune 2 | $63.9\%$ | $72.2\%$ | $60.5\%$ | $61.1\%$ | $3/7$ ($42.9\%$) |
+| Base Maia 3 | 59.1% | 61.0% | 58.1% | 59.4% | 0/7 (0%) |
+| Fine-tune 1 | 63.8% | 72.4% | 60.4% | 60.7% | 1/6 (16.7%) |
+| Fine-tune 2 | 63.9% | 72.2% | 60.5% | 61.1% | 3/7 (42.9%) |
 
-Fine-tune 2 excludes bullet moves made with at most $5$ seconds remaining after the move that lost at least $200$ centipawns. Its move prediction is essentially tied with fine-tune 1. I picked it because cleaner training data fits the clock-free bot I wanted.
+Fine-tune 2 excludes bullet moves made with at most 5 seconds remaining after the move that lost at least 200 centipawns. Its move prediction is essentially tied with fine-tune 1. I picked it because cleaner training data fits the clock-free bot I wanted.
 
-The blind column reports the focused play trials I judged “plays like me,” shown as yes judgments / trials and a percentage. These are the final $20$ focused trials, played against the full bot policies rather than the model-only move-prediction evaluation. I was the only judge, and the sample is small. These are subjective play trials, not a controlled strength test. The local log does not preserve the moves or trial lengths. See [the blind-test report](docs/results/blind-and-freeze-2026-11-15.md), including the earlier trials reported from the preceding session.
+The blind column reports the focused play trials I judged “plays like me,” shown as yes judgments / trials and a percentage. These are the final 20 focused trials, played against the full bot policies rather than the model-only move-prediction evaluation. I was the only judge, and the sample is small. These are subjective play trials, not a controlled strength test. The local log does not preserve the moves or trial lengths. See [the blind-test report](docs/results/blind-and-freeze-2026-11-15.md), including the earlier trials reported from the preceding session.
 
-The selected bot's self-play average centipawn loss was $66.2$, compared with $66.8$ in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured playing rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
+The selected bot's self-play average centipawn loss was 66.2, compared with 66.8 in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured playing rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
 
 ## Play on the website
 
 [**Play Me**](https://justee21.github.io/chess-bot/web/)
 
-Click Play Me to reveal the board, then choose White or Black. The model runs on your device, with no clock. First use downloads roughly $106\,\mathrm{MB}$ of model and runtime files; later games can use your browser’s cache. [Browser implementation, parity checks, and build instructions](docs/browser.md).
+Click Play Me to reveal the board, then choose White or Black. The model runs on your device, with no clock. First use downloads roughly 106 MB of model and runtime files; later games can use your browser’s cache. [Browser implementation, parity checks, and build instructions](docs/browser.md).
 
 ## Run the frozen bot
 
@@ -61,10 +61,10 @@ python -m chessbot.uci --config config/final.json
 | --- | --- |
 | Checkpoint | `data/finetuned-23m-clean.pt` |
 | Maia 3 revision | `1e13597c42d4858b7cfd7cfdae01e297263364b2` |
-| Elo conditioning input | $1500$ for both players |
-| Temperature | $1.2$ |
-| Relative rare-move cutoff | $0.05$ |
-| Personal table | `data/table.json`, minimum total position count $3$ |
+| Elo conditioning input | 1500 for both players |
+| Temperature | 1.2 |
+| Relative rare-move cutoff | 0.05 |
+| Personal table | `data/table.json`, minimum total position count 3 |
 | Search / resignation / draw offers or acceptance | Disabled |
 
 The cutoff is relative to the most likely playable move, not an absolute probability threshold. Temperature affects the model distribution; table hits use empirical frequencies. The existing policy avoids immediately drawing moves when alternatives exist, but forced and automatic draws can still happen.
@@ -82,9 +82,9 @@ python -m chessbot finetune --examples data/finetune-clean --device cuda \
   --lr 1e-5 --epochs 3 --patience 1 --out data/retrained-23m-clean.pt
 ```
 
-Stockfish must be installed for `mark-scrambles`, strength profiles, and temperature tuning. Fine-tuning ran on a Colab T4; see [the cleaned-data runbook](docs/finetune-colab-clean.md). The best checkpoint was epoch $1$; the second epoch worsened validation loss. Bullet training examples have weight $0.5$; other time controls have weight $1$.
+Stockfish must be installed for `mark-scrambles`, strength profiles, and temperature tuning. Fine-tuning ran on a Colab T4; see [the cleaned-data runbook](docs/finetune-colab-clean.md). The best checkpoint was epoch 1; the second epoch worsened validation loss. Bullet training examples have weight 0.5; other time controls have weight 1.
 
-Splits are chronological by whole game: the newest $15\%$ is test. Of the remaining $8{,}534$ games, the newest $10\%$ ($853$ games) is validation and the oldest $7{,}681$ games is fine-tuning data. The position table and calibration use the pre-test portion; the fine-tune uses only its training slice. The test games are not exported for training.
+Splits are chronological by whole game: the newest 15% is test. Of the remaining 8,534 games, the newest 10% (853 games) is validation and the oldest 7,681 games is fine-tuning data. The position table and calibration use the pre-test portion; the fine-tune uses only its training slice. The test games are not exported for training.
 
 For the recorded model-only comparison:
 
