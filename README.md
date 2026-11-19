@@ -1,8 +1,8 @@
 # A chess bot that plays like me
 
-I fine-tuned Maia 3 on my Chess.com games to make a bot that plays like me: my openings, my habits, and my mistakes. It samples moves from a personal position table when it has seen the position often enough, then uses the fine-tuned model everywhere else.
+I fine-tuned Maia 3 on my chess.com games to create a bot that plays how I would. This includes the openings I'd play, my playstyle, and my mistakes. It works by sampling moves from a personal position table when it's seen the position often enough, and uses the fine-tuned model everywhere else.
 
-There is no search. The goal is to predict my moves and match my playing style.
+The goal of the project was to create a bot where I couldn't tell the difference between it and me. I found 43% of the bot's games indistinguishable to mine.
 
 ## Results
 
@@ -16,7 +16,7 @@ The original dataset has 10,040 standard-chess games for `Justin0921`. The newes
 
 Fine-tune 2 excludes bullet moves made with at most 5 seconds remaining after the move that lost at least 200 centipawns. Its move prediction is essentially tied with fine-tune 1. I picked it because cleaner training data fits the clock-free bot I wanted.
 
-The blind column reports the focused play trials I judged “plays like me,” shown as yes judgments / trials and a percentage. These are the final 20 focused trials, played against the full bot policies rather than the model-only move-prediction evaluation. I was the only judge, and the sample is small. These are subjective play trials, not a controlled strength test. The local log does not preserve the moves or trial lengths. See [the blind-test report](docs/results/blind-and-freeze-2026-11-15.md), including the earlier trials reported from the preceding session.
+The blind column reports the focused play trials I judged “plays like me,” shown as yes judgments / trials and a percentage. After each game against a hidden model, I answered yes only if it played entirely like me and I never suspected it wasn't me. These are the final 20 focused trials, played against the full bot policies rather than the model-only move-prediction evaluation. I was the only judge, and the sample is small. These are subjective play trials, not a controlled strength test. The local log does not preserve the moves or trial lengths. See [the blind-test report](docs/results/blind-and-freeze-2026-11-15.md), including the earlier trials reported from the preceding session.
 
 The selected bot's self-play average centipawn loss was 66.2, compared with 66.8 in a sample of my scramble-filtered training games. This is a strength-profile proxy, not a measured playing rating. Full experiment details: [baseline](docs/results/baseline-2026-11-02.md), [fine-tune 1](docs/results/finetune-2026-11-03.md), [fine-tune 2](docs/results/finetune2-2026-11-05.md).
 
